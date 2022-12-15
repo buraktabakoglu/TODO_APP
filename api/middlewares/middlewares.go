@@ -1,0 +1,29 @@
+package middlewares
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/buraktabakoglu/GOLANGAPPX/api/auth"
+	"github.com/buraktabakoglu/GOLANGAPPX/api/responses"
+)
+
+//Jsona verilen yanıtları biçimlendiriyor.
+func SetMiddlewareJSON(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		next(w, r)
+	}
+}
+
+//Kimlik doğrulamanın geçerliliğini denetliyor.
+func SetMiddlewareAuthentication(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := auth.TokenValid(r)
+		if err != nil {
+			responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+			return
+		}
+		next(w, r)
+	}
+}
