@@ -25,10 +25,10 @@ var todos = []models.Todo{
 
 		Status:      "online",
 		Description: "Vs golangapp 1",
-		AuthorID:    1,
+		
 	},
 	{
-		AuthorID:    2,
+		
 		Status:      "ofline",
 		Description: "Vs golangapp 2",
 	},

@@ -14,7 +14,7 @@ type Todo struct {
 	Status      string    `gorm:"size:100;not null;unique" json:"status"`
 	Description string    `gorm:"size:255;not null;unique" json:"description"`
 	Author      User      `json:"author"`
-	AuthorID    uint32    `gorm:"not null" json:"author_id"`
+	AuthorID    uint32    `gorm:"primary_key" json:"author_id"`
 	CreatedAt   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
@@ -28,18 +28,25 @@ func (p *Todo) Prepare() {
 	p.UpdatedAt = time.Now()
 }
 
-func (p *Todo) Validate() error {
+func (p *Todo) Validate() map[string]string {
+
+	var err error
+
+	var errorMessages = make(map[string]string)
 
 	if p.Status == "" {
-		return errors.New("required Status")
+		err = errors.New("required Status")
+		errorMessages["required_status"] = err.Error()
 	}
 	if p.Description == "" {
-		return errors.New("required Description")
+		err = errors.New("required Description")
+		errorMessages["required_Description"] = err.Error()
 	}
 	if p.AuthorID < 1 {
-		return errors.New("required Author")
+		err = errors.New("required Author")
+		errorMessages["required_author"] = err.Error()
 	}
-	return nil
+	return errorMessages
 }
 
 func (p *Todo) CreateTodo(db *gorm.DB) (*Todo, error) {
@@ -107,9 +114,9 @@ func (p *Todo) UpdateATodo(db *gorm.DB) (*Todo, error) {
 	return p, nil
 }
 
-func (p *Todo) DeleteATodo(db *gorm.DB, pid uint64) (int64, error) {
+func (p *Todo) DeleteATodo(db *gorm.DB) (int64, error) {
 
-	db = db.Debug().Model(&Todo{}).Where("id = ? and author_id = ?", pid).Take(&Todo{}).Delete(&Todo{})
+	db = db.Debug().Model(&Todo{}).Where("id = ? and author_id = ?", p.ID).Take(&Todo{}).Delete(&Todo{})
 
 	if db.Error != nil {
 		if gorm.IsRecordNotFoundError(db.Error) {

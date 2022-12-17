@@ -2,147 +2,309 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/buraktabakoglu/GOLANGAPPX/api/auth"
 	"github.com/buraktabakoglu/GOLANGAPPX/api/models"
-	"github.com/buraktabakoglu/GOLANGAPPX/api/responses"
 	formaterror "github.com/buraktabakoglu/GOLANGAPPX/api/utils"
-	"github.com/gorilla/mux"
+	//"github.com/gorilla/mux"
 )
 
-func (server *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
+func (server *Server) CreateUser(c *gin.Context) {
 
-	body, err := ioutil.ReadAll(r.Body)
+	
+	errList = map[string]string{}
+
+	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		errList["Invalid_body"] = "Unable to get request"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
 	}
+
 	user := models.User{}
+
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		errList["Unmarshal_error"] = "Cannot unmarshal body"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
 		return
 	}
 	user.Prepare()
-	err = user.Validate("")
-	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+	errorMessages := user.Validate("")
+	if len(errorMessages) > 0 {
+		errList = errorMessages
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
 		return
 	}
 	userCreated, err := user.SaveUser(server.DB)
-
 	if err != nil {
-
 		formattedError := formaterror.FormatError(err.Error())
-
-		responses.ERROR(w, http.StatusInternalServerError, formattedError)
+		errList = formattedError
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"error":  errList,
+		})
 		return
 	}
-	w.Header().Set("Location", fmt.Sprintf("%s%s/%d", r.Host, r.RequestURI, userCreated.ID))
-	responses.JSON(w, http.StatusCreated, userCreated)
+	c.JSON(http.StatusCreated, gin.H{
+		"status":   http.StatusCreated,
+		"response": userCreated,
+	})
 }
 
-func (server *Server) GetUsers(w http.ResponseWriter, r *http.Request) {
+func (server *Server) GetUsers(c *gin.Context) {	
+	errList = map[string]string{}
 
 	user := models.User{}
 
 	users, err := user.FindAllUsers(server.DB)
 	if err != nil {
-		responses.ERROR(w, http.StatusInternalServerError, err)
+		errList["No_user"] = "No User Found"
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"error":  errList,
+		})
 		return
 	}
-	responses.JSON(w, http.StatusOK, users)
+	c.JSON(http.StatusOK, gin.H{
+		"status":   http.StatusOK,
+		"response": users,
+	})
 }
 
-func (server *Server) GetUser(w http.ResponseWriter, r *http.Request) {
+func (server *Server) GetUser(c *gin.Context) {
 
-	vars := mux.Vars(r)
-	uid, err := strconv.ParseUint(vars["id"], 10, 32)
+	
+	errList = map[string]string{}
+
+	userID := c.Param("id")
+
+	uid, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
+		errList["Invalid_request"] = "Invalid Request"
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"error":  errList,
+		})
 		return
 	}
 	user := models.User{}
+
 	userGotten, err := user.FindUserByID(server.DB, uint32(uid))
 	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
+		errList["No_user"] = "No User Found"
+		c.JSON(http.StatusNotFound, gin.H{
+			"status": http.StatusNotFound,
+			"error":  errList,
+		})
 		return
 	}
-	responses.JSON(w, http.StatusOK, userGotten)
+	c.JSON(http.StatusOK, gin.H{
+		"status":   http.StatusOK,
+		"response": userGotten,
+	})
 }
 
-func (server *Server) UpdateUser(w http.ResponseWriter, r *http.Request) {
+func (server *Server) UpdateUser(c *gin.Context) {
 
-	vars := mux.Vars(r)
-	uid, err := strconv.ParseUint(vars["id"], 10, 32)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
-		return
-	}
-	user := models.User{}
-	err = json.Unmarshal(body, &user)
-	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
-		return
-	}
-	tokenID, err := auth.ExtractTokenID(r)
-	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
-		return
-	}
-	if tokenID != uint32(uid) {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
-		return
-	}
-	user.Prepare()
-	err = user.Validate("update")
-	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
-		return
-	}
-	updatedUser, err := user.UpdateAUser(server.DB, uint32(uid))
-	if err != nil {
-		formattedError := formaterror.FormatError(err.Error())
-		responses.ERROR(w, http.StatusInternalServerError, formattedError)
-		return
-	}
-	responses.JSON(w, http.StatusOK, updatedUser)
-}
+	
+	errList = map[string]string{}
 
-func (server *Server) DeleteUser(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-
-	user := models.User{}
-
-	uid, err := strconv.ParseUint(vars["id"], 10, 32)
+	userID := c.Param("id")
+	
+	uid, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
+		errList["Invalid_request"] = "Invalid Request"
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"error":  errList,
+		})
 		return
 	}
-	tokenID, err := auth.ExtractTokenID(r)
+	
+	tokenID, err := auth.ExtractTokenID(c.Request)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+		errList["Unauthorized"] = "Unauthorized"
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status": http.StatusUnauthorized,
+			"error":  errList,
+		})
 		return
 	}
+	
 	if tokenID != 0 && tokenID != uint32(uid) {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
+		errList["Unauthorized"] = "Unauthorized"
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status": http.StatusUnauthorized,
+			"error":  errList,
+		})
 		return
 	}
+	
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		errList["Invalid_body"] = "Unable to get request"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
+	}
+	requestBody := map[string]string{}
+	err = json.Unmarshal(body, &requestBody)
+	if err != nil {
+		errList["Unmarshal_error"] = "Cannot unmarshal body"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
+	}
+	
+	formerUser := models.User{}
+	err = server.DB.Debug().Model(models.User{}).Where("id = ?", uid).Take(&formerUser).Error
+	if err != nil {
+		errList["User_invalid"] = "The user is does not exist"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
+	}
+
+	newUser := models.User{}
+
+	
+	if requestBody["current_password"] == "" && requestBody["new_password"] != "" {
+		errList["Empty_current"] = "Please Provide current password"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
+	}
+	if requestBody["current_password"] != "" && requestBody["new_password"] == "" {
+		errList["Empty_new"] = "Please Provide new password"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
+	}
+	if requestBody["current_password"] != "" && requestBody["new_password"] != "" {
+		
+		if len(requestBody["new_password"]) < 6 {
+			errList["Invalid_password"] = "Password should be at 6 characters"
+			c.JSON(http.StatusUnprocessableEntity, gin.H{
+				"status": http.StatusUnprocessableEntity,
+				"error":  errList,
+			})
+			return
+		}
+		
+		err = models.VerifyPassword(formerUser.Password, requestBody["current_password"])
+		if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
+			errList["Password_mismatch"] = "The password not correct"
+			c.JSON(http.StatusUnprocessableEntity, gin.H{
+				"status": http.StatusUnprocessableEntity,
+				"error":  errList,
+			})
+			return
+		}
+		
+		newUser.Nickname = formerUser.Nickname 
+		newUser.Email = requestBody["email"]
+		newUser.Password = requestBody["new_password"]
+	}
+
+	
+	newUser.Nickname = formerUser.Nickname
+	newUser.Email = requestBody["email"]
+
+	newUser.Prepare()
+	errorMessages := newUser.Validate("update")
+	if len(errorMessages) > 0 {
+		errList = errorMessages
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
+	}
+	updatedUser, err := newUser.UpdateAUser(server.DB, uint32(uid))
+	if err != nil {
+		errList := formaterror.FormatError(err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"error":  errList,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":   http.StatusOK,
+		"response": updatedUser,
+	})
+}
+
+func (server *Server) DeleteUser(c *gin.Context) {
+
+	
+	errList = map[string]string{}
+	var tokenID uint32
+	userID := c.Param("id")
+	
+	uid, err := strconv.ParseUint(userID, 10, 32)
+	if err != nil {
+		errList["Invalid_request"] = "Invalid Request"
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"error":  errList,
+		})
+		return
+	}
+	
+	tokenID, err = auth.ExtractTokenID(c.Request)
+	if err != nil {
+		errList["Unauthorized"] = "Unauthorized"
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status": http.StatusUnauthorized,
+			"error":  errList,
+		})
+		return
+	}
+	
+	if tokenID != 0 && tokenID != uint32(uid) {
+		errList["Unauthorized"] = "Unauthorized"
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status": http.StatusUnauthorized,
+			"error":  errList,
+		})
+		return
+	}
+
+	user := models.User{}
 	_, err = user.DeleteAUser(server.DB, uint32(uid))
 	if err != nil {
-		responses.ERROR(w, http.StatusInternalServerError, err)
+		errList["Other_error"] = "Please try again later"
+		c.JSON(http.StatusNotFound, gin.H{
+			"status": http.StatusNotFound,
+			"error":  errList,
+		})
 		return
 	}
-	w.Header().Set("Entity", fmt.Sprintf("%d", uid))
-	responses.JSON(w, http.StatusNoContent, "")
 }

@@ -7,7 +7,8 @@ import (
 
 	"github.com/jinzhu/gorm"
 
-	"github.com/gorilla/mux"
+	//"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 
 	_"github.com/jinzhu/gorm/dialects/postgres"
 
@@ -16,8 +17,10 @@ import (
 
 type Server struct {
 	DB     *gorm.DB
-	Router *mux.Router
+	Router *gin.Engine
 }
+
+var errList = make(map[string]string)
 
 func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) {
 
@@ -36,7 +39,7 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 
 	server.DB.Debug().AutoMigrate(&models.User{}, &models.Todo{}) //database migration yapılacak.
 
-	server.Router = mux.NewRouter()
+	server.Router = gin.Default()
 
 	server.initializeRoutes()
 }

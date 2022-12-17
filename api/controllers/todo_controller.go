@@ -2,186 +2,309 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"github.com/buraktabakoglu/GOLANGAPPX/api/auth"
 	"github.com/buraktabakoglu/GOLANGAPPX/api/models"
-	"github.com/buraktabakoglu/GOLANGAPPX/api/responses"
 	formaterror "github.com/buraktabakoglu/GOLANGAPPX/api/utils"
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
+	//"github.com/gorilla/mux"
 )
 
-func (server *Server) CreateTodo(w http.ResponseWriter, r *http.Request) {
+func (server *Server) CreateTodo(c *gin.Context) {
 
-	body, err := ioutil.ReadAll(r.Body)
+	errList = map[string]string{}
+
+	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		errList["Invalid_body"] = "unable to get request"
+		c.JSON(http.StatusUnprocessableEntity,gin.H{
+			"status":http.StatusUnprocessableEntity,
+			"error": errList,
+		})
 		return
 	}
+	todo := models.Todo{}
+
+	err = json.Unmarshal(body, &todo)
+	if err != nil {
+		errList["unmarshal_error"] = "cannow unmarshal body"
+		c.JSON(http.StatusUnprocessableEntity , gin.H{
+
+			"status":http.StatusUnprocessableEntity,
+			"error":errList,
+		})
+		return
+	}
+
+	uid, err := auth.ExtractTokenID(c.Request)
+	if err != nil{
+		errList["Unauhthorizeid"] = "Unauthorized"
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"status":http.StatusUnauthorized,
+			"error":errList,
+		})
+		return
+	}
+
+	user := models.User{}
+
+	err = server.DB.Debug().Model(models.User{}).Where("id = ?" ,uid).Take(&user).Error
+	if err != nil {
+
+		errList["unathorized"] = "Unathorized"
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"status":http.StatusUnauthorized,
+			"error":errList,
+		})
+		return
+	}
+
+	todo.AuthorID=uid
+
+	todo.Prepare()
+	errorMessages := todo.Validate()
+
+	if len(errorMessages) > 0 {
+
+		errList = errorMessages 
+		c.JSON(http.StatusUnprocessableEntity,gin.H{
+			"status":http.StatusUnprocessableEntity,
+			"error":errList,
+		})
+		return
+	}
+
+	todoCreated, err := todo.CreateTodo(server.DB)
+
+	if err != nil{
+
+		errList := formaterror.FormatError(err.Error())
+		c.JSON(http.StatusInternalServerError , gin.H{
+			"status":http.StatusInternalServerError,
+			"error":errList,
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated,gin.H{
+		"status":http.StatusCreated,
+		"response":todoCreated,
+	})
+
+}
+
+
+	
+
+	func (server *Server) GetTodos(c *gin.Context) {
+
+		todo := models.Todo{}
+	
+		todos, err := todo.FindAllTodos(server.DB)
+		if err != nil {
+			errList["No_post"] = "No Post Found"
+			c.JSON(http.StatusNotFound, gin.H{
+				"status": http.StatusNotFound,
+				"error":  errList,
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"status":   http.StatusOK,
+			"response": todos,
+		})
+	}
+
+func (server *Server) GetTodo(c *gin.Context) {
+
+	todoID := c.Param("id")
+
+	pid, err := strconv.ParseUint(todoID, 10 , 64)
+	if err != nil {
+		errList["Invalid_request"] = "Invalid Request"
+
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":http.StatusBadRequest,
+			"error":errList,
+		})
+		return
+	}
+
+	todo := models.Todo{}
+
+
+	postRec, err := todo.FindTodoByID(server.DB,pid)
+	if err != nil {
+		errList["no_todo"] = "Not todo found"
+		c.JSON(http.StatusNotFound,gin.H{
+			"status":http.StatusNotFound,
+			"error":errList,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"status":http.StatusOK,
+		"response":postRec,
+	})
+
+	
+}
+
+func (server *Server) UpdateATodo(c *gin.Context) {
+
+	errList = map[string]string{}
+
+	postID := c.Param("id")
+
+	pid, err := strconv.ParseUint(postID, 10, 64)
+	if err != nil {
+		errList["Invalied_request"] = "Invalid request"
+		c.JSON(http.StatusBadRequest, gin.H{
+
+			"status":http.StatusBadRequest,
+			"error":errList,
+		})
+		return
+	}
+
+	uid, err := auth.ExtractTokenID(c.Request)
+	if err != nil {
+		errList["unathorized"] = "unauthorrized"
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":http.StatusUnauthorized,
+			"error":errList,
+		})
+		return
+	}
+
+	todoCont := models.Todo{}
+	err = server.DB.Debug().Model(models.Todo{}).Where("id = ? ", pid).Take(&todoCont).Error
+	if err != nil {
+		errList["no_todo"] = "No todo found"
+		c.JSON(http.StatusNotFound,gin.H{
+			"status":http.StatusNotFound,
+			"error":errList,
+		})
+		return
+	}
+
+	if uid != todoCont.AuthorID {
+		errList["Unauthroized"] = "unauthorized"
+		c.JSON(http.StatusUnauthorized,gin.H{
+			"status":http.StatusUnauthorized,
+			"error":errList,
+		})
+		return
+	}
+
+	
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		errList["Invalid_body"] = "Unable to get request"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
+	}
+	
 	todo := models.Todo{}
 	err = json.Unmarshal(body, &todo)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		errList["Unmarshal_error"] = "Cannot unmarshal body"
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
 		return
 	}
+	todo.ID = todoCont.ID 
+	todo.AuthorID = todoCont.AuthorID
+
 	todo.Prepare()
-	err = todo.Validate()
+	errorMessages := todo.Validate()
+	if len(errorMessages) > 0 {
+		errList = errorMessages
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"status": http.StatusUnprocessableEntity,
+			"error":  errList,
+		})
+		return
+	}
 
+	todoAUpdated, err := todo.UpdateATodo(server.DB)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		errList := formaterror.FormatError(err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"error":  errList,
+		})
 		return
 	}
-	uid, err := auth.ExtractTokenID(r)
-	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
-		return
-	}
-	if uid != uint32(todo.AuthorID) {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
-		return
-	}
-	CreateTodo, err := todo.CreateTodo(server.DB)
-
-	if err != nil {
-		formattedError := formaterror.FormatError(err.Error())
-		responses.ERROR(w, http.StatusInternalServerError, formattedError)
-		return
-	}
-	w.Header().Set("Lacation", fmt.Sprintf("%s%s/%d", r.Host, r.URL.Path, CreateTodo.ID))
-	responses.JSON(w, http.StatusCreated, CreateTodo)
+	c.JSON(http.StatusOK, gin.H{
+		"status":   http.StatusOK,
+		"response": todoAUpdated,
+	})
 }
 
-func (server *Server) GetTodos(w http.ResponseWriter, r *http.Request) {
+func (server *Server) DeleteATodo(c *gin.Context) {
 
+	todoID := c.Param("id")
+
+	pid, err := strconv.ParseUint(todoID,10, 64)
+	if err != nil {
+		errList["Invalid_request"] = "Invalid requestr"
+		c.JSON(http.StatusBadRequest,gin.H{
+
+			"status":http.StatusBadRequest,
+			"error":errList,
+
+		})
+		return
+	}
+
+	uid , err := auth.ExtractTokenID(c.Request)
+	if err != nil {
+		errList["unauthorized"] = "Unauthorized"
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":http.StatusUnauthorized,
+			"error":errList,
+		})
+		return
+	}
+	
 	todo := models.Todo{}
-
-	todos, err := todo.FindAllTodos(server.DB)
+	err = server.DB.Debug().Model(models.Todo{}).Where("id = ? ",pid).Take(&todo).Error
 	if err != nil {
-		responses.ERROR(w, http.StatusInternalServerError, err)
+		errList["no todo"] = "not todo found"
+		c.JSON(http.StatusNotFound,gin.H{
+			"status":http.StatusNotFound,
+			"error":errList,
+		})
 		return
 	}
-	responses.JSON(w, http.StatusOK, todos)
-}
-
-func (server *Server) GetTodo(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-	pid, err := strconv.ParseUint(vars["id"], 10, 64)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
-	todo := models.Todo{}
-
-	todoReceived, err := todo.FindTodoByID(server.DB, pid)
-	if err != nil {
-		responses.ERROR(w, http.StatusInternalServerError, err)
-		return
-	}
-	responses.JSON(w, http.StatusOK, todoReceived)
-}
-
-func (server *Server) UpdateATodo(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-
-	pid, err := strconv.ParseUint(vars["id"], 10, 64)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
-
-	uid, err := auth.ExtractTokenID(r)
-	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
-		return
-	}
-
-	todo := models.Todo{}
-	err = server.DB.Debug().Model(models.Todo{}).Where("id = ?", pid).Take(&todo).Error
-	if err != nil {
-		responses.ERROR(w, http.StatusNotFound, errors.New("todo not found"))
-		return
-	}
-
 	if uid != todo.AuthorID {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("unauthorized"))
+		errList["Unauthorized"] = "unauthorized"
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":http.StatusUnauthorized,
+			"error":errList,
+		})
 		return
+		
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	_, err = todo.DeleteATodo(server.DB)
 	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		errList["other_error"] = "Try again"
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":http.StatusInternalServerError,
+			"error":errList,
+		})
 		return
 	}
 
-	UpdateATodo := models.Todo{}
-	err = json.Unmarshal(body, &UpdateATodo)
-	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
-		return
-	}
-
-	if uid != UpdateATodo.AuthorID {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
-		return
-	}
-
-	UpdateATodo.Prepare()
-	err = UpdateATodo.Validate()
-	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
-		return
-	}
-
-	UpdateATodo.ID = todo.ID
-
-	postUpdated, err := UpdateATodo.UpdateATodo(server.DB)
-
-	if err != nil {
-		formattedError := formaterror.FormatError(err.Error())
-		responses.ERROR(w, http.StatusInternalServerError, formattedError)
-		return
-	}
-	responses.JSON(w, http.StatusOK, postUpdated)
-}
-
-func (server *Server) DeleteATodo(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-
-	pid, err := strconv.ParseUint(vars["id"], 10, 64)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
-
-	uid, err := auth.ExtractTokenID(r)
-	if err != nil {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
-		return
-	}
-
-	todo := models.Todo{}
-	err = server.DB.Debug().Model(models.Todo{}).Where("id = ?", pid).Take(&todo).Error
-	if err != nil {
-		responses.ERROR(w, http.StatusNotFound, errors.New("Unauthorized"))
-		return
-	}
-
-	if uid != todo.AuthorID {
-		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
-		return
-	}
-	_, err = todo.DeleteATodo(server.DB, pid)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
-	w.Header().Set("Entity", fmt.Sprintf("%d", pid))
-	responses.JSON(w, http.StatusNoContent, "")
 }

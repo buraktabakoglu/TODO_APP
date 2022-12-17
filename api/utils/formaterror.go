@@ -1,25 +1,38 @@
 package formaterror
 
 import (
-	"errors"
 	"strings"
 )
 
-func FormatError(err string) error {
+var errorMessages = make(map[string]string)
 
-	if strings.Contains(err, "nickname") {
-		return errors.New("nickname Already Taken")
+
+
+func FormatError(errString string) map[string]string {
+
+	if strings.Contains(errString, "nickname") {
+		errorMessages["Taken_nickname"] = "nickname Already Taken"
 	}
 
-	if strings.Contains(err, "email") {
-		return errors.New("email Already Taken")
+	if strings.Contains(errString, "email") {
+		errorMessages["Taken_email"] = "Email Already Taken"
+
+	}		
+	if strings.Contains(errString, "hashedPassword") {
+		errorMessages["Incorrect_password"] = "Incorrect Password"
+	}
+	if strings.Contains(errString, "record not found") {
+		errorMessages["No_record"] = "No Record Found"
 	}
 
-	if strings.Contains(err, "title") {
-		return errors.New("title Already Taken")
+	if len(errorMessages) > 0 {
+		return errorMessages
 	}
-	if strings.Contains(err, "hashedPassword") {
-		return errors.New("ıncorrect Password")
+
+	if len(errorMessages) == 0 {
+		errorMessages["Incorrect_details"] = "Incorrect Details"
+		return errorMessages
 	}
-	return errors.New("ıncorrect Details")
+
+	return nil
 }

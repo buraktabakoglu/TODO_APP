@@ -1,29 +1,26 @@
 package middlewares
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/buraktabakoglu/GOLANGAPPX/api/auth"
-	"github.com/buraktabakoglu/GOLANGAPPX/api/responses"
+	"github.com/gin-gonic/gin"
 )
 
-//Jsona verilen yanıtları biçimlendiriyor.
-func SetMiddlewareJSON(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		next(w, r)
-	}
-}
 
-//Kimlik doğrulamanın geçerliliğini denetliyor.
-func SetMiddlewareAuthentication(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		err := auth.TokenValid(r)
+func TokenAuthMiddleware() gin.HandlerFunc {
+	errList := make(map[string]string)
+	return func(c *gin.Context) {
+		err := auth.TokenValid(c.Request)
 		if err != nil {
-			responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+			errList["unauthorized"] = "Unauthorized"
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status": http.StatusUnauthorized,
+				"error":  errList,
+			})
+			c.Abort()
 			return
 		}
-		next(w, r)
+		c.Next()
 	}
 }
