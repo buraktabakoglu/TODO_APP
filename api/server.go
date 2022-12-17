@@ -11,12 +11,12 @@ import (
 )
 
 var server = controllers.Server{}
+var err error
 
 func Run() {
 	
 	
-	var err error
-
+	
 	err = godotenv.Load()
 	if err != nil {
 		log.Fatalf("error getting env, not comming through %v", err)
