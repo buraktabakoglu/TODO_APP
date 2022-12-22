@@ -4,42 +4,48 @@ import (
 	"fmt"
 	"log"
 	"os"
-	
+	"testing"
 
-	_"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/gorm"
-	"github.com/joho/godotenv"
 	"github.com/buraktabakoglu/GOLANGAPPX/api/controllers"
 	"github.com/buraktabakoglu/GOLANGAPPX/api/models"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/joho/godotenv"
 )
 
-var server = controllers.Server{}//global'den cıkar 
-//test suite
+var server = controllers.Server{}
 
 
 var userInstance = models.User{}
 
 var todoInstance = models.Todo{}
 	
+var err error
 
+func TestMain(m *testing.M) {
 
-func TestMain() {
-	if _, err := os.Stat("../../.env"); !os.IsNotExist(err) {
+	
+
+	
 		
 		err = godotenv.Load(os.ExpandEnv("../../.env"))
 		if err != nil {
 			log.Fatalf("error getting env %v\n", err)
 		}
 		Database()
+		os.Exit(m.Run())
 	}
+
+		
 	
-	}
+	
+	
 
 
 
 func Database() {
-
 	var err error
+	
 
 	TestDbDriver := os.Getenv("TestDbDriver")
 	
@@ -59,19 +65,18 @@ func Database() {
 			fmt.Printf("we are connected to the %s database\n", TestDbDriver)
 		}
 	}
-	server.Run(":8080")
+	
 	
 }
 
 func refreshUserTable() error {
 	
 	
-	TestMain()
+	
 	fmt.Println(server)
 	fmt.Println(server.DB)
 
-	server.DB.Debug().AutoMigrate(&models.User{}, &models.Todo{}) 
-
+	
 	err := server.DB.DropTableIfExists(&models.User{}).Error
 	if err != nil {
 		return err
@@ -126,7 +131,7 @@ func seedUsers() error {
 }
 
 func refreshUserAndTodoTable() error {
-	TestMain()
+	
 
 	err := server.DB.DropTableIfExists(&models.User{}, &models.Todo{}).Error
 	if err != nil {
@@ -212,4 +217,3 @@ func seedUsersAndTodos() ([]models.User, []models.Todo, error) {
 	}
 	return users, todos, nil
 }
-

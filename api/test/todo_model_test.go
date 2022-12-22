@@ -15,7 +15,7 @@ import (
 
 
 func TestFindAllTodos(t *testing.T) {
-	TestMain()
+	
 
 	err := refreshUserAndTodoTable()
 	if err != nil {
