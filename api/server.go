@@ -8,6 +8,7 @@ import (
 	"github.com/buraktabakoglu/GOLANGAPPX/api/controllers"
 	"github.com/buraktabakoglu/GOLANGAPPX/api/seed"
 	"github.com/joho/godotenv"
+	
 )
 
 var server = controllers.Server{}
@@ -28,6 +29,11 @@ func Run() {
 
 	seed.Load(server.DB)
 
+
+	
+	// Start server
 	server.Run(":8080")
+
+	
 
 }

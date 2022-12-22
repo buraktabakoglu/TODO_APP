@@ -35,15 +35,15 @@ func (server *Server) Login(c *gin.Context) {
 	}
 
 	user.Prepare()
-	errorMessages := user.Validate("login")
-	if len(errorMessages) > 0 {
+	errList = user.Validate("login")
+	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": http.StatusUnprocessableEntity,
-			"error":  errorMessages,
+			"error":  errList,
 		})
 		return
 	}
-	userData, err := server.SignIn(user.Email, user.Password)
+	token, err := server.SignIn(user.Email, user.Password)
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -51,11 +51,12 @@ func (server *Server) Login(c *gin.Context) {
 			"error":  formattedError,
 		})
 		return
-	}
-	c.JSON(http.StatusOK, gin.H{
+	}else 
+	{c.JSON(http.StatusOK, gin.H{
 		"status":   http.StatusOK,
-		"response": userData,
-	})
+		"response": token,
+	})}
+	
 }
 
 
@@ -73,5 +74,5 @@ func (server *Server) SignIn(email, password string) (string, error) {
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
 		return "", err
 	}
-	return auth.CreateToken(user.ID)
+	return auth.CreateToken(uint32(user.ID))
 }

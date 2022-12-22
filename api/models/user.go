@@ -13,7 +13,7 @@ import (
 )
 
 type User struct {
-	ID        uint64    `gorm:"primary_key;auto_increment" json:"id"`
+	ID        int32     `gorm:"primary_key;auto_increment" json:"id"`
 	Nickname  string    `gorm:"size:255;not null;unique" json:"nickname"`
 	Email     string    `gorm:"size:100;not null;unique" json:"email"`
 	Password  string    `gorm:"size:100;not null;" json:"password"`
@@ -22,10 +22,6 @@ type User struct {
 }
 
 var err error
-
-//why do we hash the password?
-//it is intended to verify that any file or piece of data has not been modified or tampered with.
-
 
 func Hash(password string) ([]byte, error) {
 	return bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -45,13 +41,14 @@ func (u *User) BeforeSave() error {
 }
 
 func (u *User) Prepare() {
-	u.ID = 0
+
 	u.Nickname = html.EscapeString(strings.TrimSpace(u.Nickname))
 	u.Email = html.EscapeString(strings.TrimSpace(u.Email))
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
 }
 
+//Validate
 func (u *User) Validate(action string) map[string]string {
 	var errorMessages = make(map[string]string)
 	var err error
@@ -80,7 +77,7 @@ func (u *User) Validate(action string) map[string]string {
 		}
 		if u.Email != "" {
 			if err = checkmail.ValidateFormat(u.Email); err != nil {
-				err = errors.New("ınvalid Email")
+				err = errors.New("invalid Email")
 				errorMessages["Invalid_email"] = err.Error()
 			}
 		}
@@ -91,7 +88,7 @@ func (u *User) Validate(action string) map[string]string {
 		}
 		if u.Email != "" {
 			if err = checkmail.ValidateFormat(u.Email); err != nil {
-				err = errors.New("ınvalid Email")
+				err = errors.New("invalid Email")
 				errorMessages["Invalid_email"] = err.Error()
 			}
 		}
@@ -115,14 +112,15 @@ func (u *User) Validate(action string) map[string]string {
 		}
 		if u.Email != "" {
 			if err = checkmail.ValidateFormat(u.Email); err != nil {
-				err = errors.New("ınvalid Email")
-				errorMessages["Invalid_email"] = err.Error()
+				err = errors.New("invalid Email")
+				errorMessages["invalid_email"] = err.Error()
 			}
 		}
 	}
 	return errorMessages
 }
 
+//SaveUser
 func (u *User) SaveUser(db *gorm.DB) (*User, error) {
 
 	err = db.Debug().Create(&u).Error
@@ -132,9 +130,8 @@ func (u *User) SaveUser(db *gorm.DB) (*User, error) {
 	return u, nil
 }
 
-
-//only the admin can do this
-func (u User) FindAllUsers(db *gorm.DB) (*[]User, error) {
+//FindAllUsers
+func (u *User) FindAllUsers(db *gorm.DB) (*[]User, error) {
 	var err error
 	users := []User{}
 	err = db.Debug().Model(&User{}).Limit(1000).Find(&users).Error
@@ -144,6 +141,7 @@ func (u User) FindAllUsers(db *gorm.DB) (*[]User, error) {
 	return &users, err
 }
 
+//FindUserByID
 func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
 
 	err = db.Debug().Model(User{}).Where("id = ?", uid).Take(&u).Error
@@ -156,6 +154,7 @@ func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	return u, err
 }
 
+//UpdateAUser
 func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 
 	err := u.BeforeSave()
@@ -174,8 +173,6 @@ func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 		return &User{}, db.Error
 	}
 
-
-
 	//updated user
 	err = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&u).Error
 	if err != nil {
@@ -184,6 +181,7 @@ func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 	return u, nil
 }
 
+//DeleteAUser
 func (u *User) DeleteAUser(db *gorm.DB, uid uint32) (int64, error) {
 
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).Delete(&User{})
@@ -193,6 +191,8 @@ func (u *User) DeleteAUser(db *gorm.DB, uid uint32) (int64, error) {
 	}
 	return db.RowsAffected, nil
 }
+
+//UpdatePassword
 func (u *User) UpdatePassword(db *gorm.DB) error {
 
 	//password hash..

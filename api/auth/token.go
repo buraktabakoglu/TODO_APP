@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,7 +15,10 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-func CreateToken(user_id uint64) (string, error) {
+
+
+
+func CreateToken(user_id uint32) (string, error) {
 	claims := jwt.MapClaims{}
 	claims["authorized"] = true
 	claims["user_id"] = user_id
@@ -21,6 +26,17 @@ func CreateToken(user_id uint64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(os.Getenv("API_SECRET")))
 
+}
+
+func TokenHash(text string) string {
+
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	theHash := hex.EncodeToString(hasher.Sum(nil))
+
+	theToken := theHash
+
+	return theToken
 }
 
 func TokenValid(r *http.Request) error {
@@ -39,6 +55,7 @@ func TokenValid(r *http.Request) error {
 	}
 	return nil
 }
+
 
 func ExtractToken(r *http.Request) string {
 	keys := r.URL.Query()

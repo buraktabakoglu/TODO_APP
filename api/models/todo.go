@@ -6,21 +6,25 @@ import (
 	"strings"
 	"time"
 
+	
 	"github.com/jinzhu/gorm"
 )
 
+//Todo
 type Todo struct {
 	ID          uint64    `json:"id" gorm:"primary_key"`
 	Status      string    `gorm:"size:100;not null;unique" json:"status"`
 	Description string    `gorm:"size:255;not null;unique" json:"description"`
 	Author      User      `json:"author"`
-	AuthorID    uint32    `gorm:"primary_key" json:"author_id"`
+	AuthorID    uint32    `gorm:"not null" json:"author_id"`
 	CreatedAt   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
+
+
 func (p *Todo) Prepare() {
-	p.ID = 0
+	
 	p.Status = html.EscapeString(strings.TrimSpace(p.Status))
 	p.Description = html.EscapeString(strings.TrimSpace(p.Description))
 	p.Author = User{}
@@ -28,27 +32,22 @@ func (p *Todo) Prepare() {
 	p.UpdatedAt = time.Now()
 }
 
-func (p *Todo) Validate() map[string]string {
 
-	var err error
-
-	var errorMessages = make(map[string]string)
+//Validate
+func (p *Todo) Validate() error {
 
 	if p.Status == "" {
 		err = errors.New("required Status")
-		errorMessages["required_status"] = err.Error()
 	}
 	if p.Description == "" {
 		err = errors.New("required Description")
-		errorMessages["required_Description"] = err.Error()
 	}
 	if p.AuthorID < 1 {
 		err = errors.New("required Author")
-		errorMessages["required_author"] = err.Error()
 	}
-	return errorMessages
+	return nil
 }
-
+//CreateTodo
 func (p *Todo) CreateTodo(db *gorm.DB) (*Todo, error) {
 	var err error
 	err = db.Debug().Model(&Todo{}).Create(&p).Error
@@ -61,9 +60,10 @@ func (p *Todo) CreateTodo(db *gorm.DB) (*Todo, error) {
 			return &Todo{}, err
 		}
 	}
-	return p, nil
+	return p , nil
 }
 
+//FindAllTodos
 func (p *Todo) FindAllTodos(db *gorm.DB) (*[]Todo, error) {
 	var err error
 	todos := []Todo{}
@@ -81,7 +81,7 @@ func (p *Todo) FindAllTodos(db *gorm.DB) (*[]Todo, error) {
 	}
 	return &todos, nil
 }
-
+//FindTodoByID
 func (p *Todo) FindTodoByID(db *gorm.DB, pid uint64) (*Todo, error) {
 	var err error
 	err = db.Debug().Model(&Todo{}).Where("id = ?", pid).Take(&p).Error
@@ -96,7 +96,7 @@ func (p *Todo) FindTodoByID(db *gorm.DB, pid uint64) (*Todo, error) {
 	}
 	return p, nil
 }
-
+//UpdateATodo
 func (p *Todo) UpdateATodo(db *gorm.DB) (*Todo, error) {
 
 	var err error
@@ -111,12 +111,12 @@ func (p *Todo) UpdateATodo(db *gorm.DB) (*Todo, error) {
 			return &Todo{}, err
 		}
 	}
-	return p, nil
+	return &Todo{}, nil
 }
+//DeleteATodo
+func (p *Todo) DeleteATodo(db *gorm.DB, pid uint64, uid uint32) (int64, error) {
 
-func (p *Todo) DeleteATodo(db *gorm.DB) (int64, error) {
-
-	db = db.Debug().Model(&Todo{}).Where("id = ? and author_id = ?", p.ID).Take(&Todo{}).Delete(&Todo{})
+	db = db.Debug().Model(&Todo{}).Where("id = ? and author_id = ?", pid, uid).Take(&Todo{}).Delete(&Todo{})
 
 	if db.Error != nil {
 		if gorm.IsRecordNotFoundError(db.Error) {

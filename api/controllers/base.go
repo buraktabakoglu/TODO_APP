@@ -38,6 +38,8 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 	}
 
 	server.DB.Debug().AutoMigrate(&models.User{}, &models.Todo{}) //database migration yapılacak.
+	//server.DB.Create(&models.User{Nickname: "CREATE",Email: "Burakt_59@gmail.com",Password: "3g1avcs"})
+	//server.DB.Create(&models.Todo{Status: "DENEME",Description: "DENEME DES."})
 
 	server.Router = gin.Default()
 
