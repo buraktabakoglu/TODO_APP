@@ -1,4 +1,4 @@
-package modeltests
+package test
 
 import (
 	"log"
@@ -6,7 +6,7 @@ import (
 
 	   
 	_"github.com/jinzhu/gorm/dialects/postgres" 
-	"github.com/buraktabakoglu/GOLANGAPPX/api/models"
+	"github.com/buraktabakoglu/GOLANGAPPX/api/pkg/models"
 	"gopkg.in/go-playground/assert.v1"
 )
 

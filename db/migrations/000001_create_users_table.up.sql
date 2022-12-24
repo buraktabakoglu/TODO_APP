@@ -1,7 +1,7 @@
 BEGIN;
 
 CREATE TABLE todos (
-  "id" PRIMARY KEY, 
+  "id" SERIAL PRIMARY KEY, 
   "status" varchar(32) NOT NULL DEFAULT 'ACTIVE',
   "description" varchar(128) NOT NULL,   
   "Author"
@@ -14,7 +14,7 @@ CREATE TABLE todos (
 COMMIT;
 
 CREATE TABLE users (
-  "id" PRIMARY KEY, 
+  "id" SERIAL PRIMARY KEY, 
   "name" varchar(32) NOT NULL DEFAULT 'ACTIVE',
   "email" varchar(32) NOT NULL,   
   "password"  NOT NULL , 

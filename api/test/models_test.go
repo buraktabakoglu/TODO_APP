@@ -1,4 +1,4 @@
-package modeltests
+package test
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/buraktabakoglu/GOLANGAPPX/api/controllers"
-	"github.com/buraktabakoglu/GOLANGAPPX/api/models"
+	"github.com/buraktabakoglu/GOLANGAPPX/api/internal/controllers"
+	"github.com/buraktabakoglu/GOLANGAPPX/api/pkg/models"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/joho/godotenv"
