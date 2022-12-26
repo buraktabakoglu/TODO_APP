@@ -233,14 +233,14 @@ func TestUpdateTodo(t *testing.T) {
 			
 			id:         strconv.Itoa(int(AuthTodoID)),
 			updateJSON: `{"status":"", "description": "This is the updated description"}`,
-			statusCode: 200,
+			statusCode: 422,
 			tokenGiven: tokenString,
 		},
 		{
 			
 			id:         strconv.Itoa(int(AuthTodoID)),
 			updateJSON: `{"status":"Awesome status", "description": ""}`,
-			statusCode: 200,
+			statusCode: 422,
 			tokenGiven: tokenString,
 		},
 		{
