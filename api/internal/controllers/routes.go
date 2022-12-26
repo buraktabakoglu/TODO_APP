@@ -28,6 +28,10 @@ func (s *Server) initializeRoutes() {
 		rou.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 		//Login
 		rou.POST("/login",s.Login)
+		//Logout
+		rou.DELETE("/logout",s.Logout)
+
+		
 
 
 		//Create user

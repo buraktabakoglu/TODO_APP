@@ -3,7 +3,7 @@ package seed
 import (
 	"log"
 
-	"github.com/buraktabakoglu/GOLANGAPPX/api/models"
+	"github.com/buraktabakoglu/GOLANGAPPX/api/pkg/models"
 	"github.com/jinzhu/gorm"
 )
 

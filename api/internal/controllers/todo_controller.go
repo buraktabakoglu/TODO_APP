@@ -49,18 +49,7 @@ func (server *Server) CreateTodo(c *gin.Context) {
 			"error":errList,
 		})
 		return
-	}
-	
-
-	
-	
-	if err != nil{
-		errList["unmarshall_error"] = "can not unmarshal body"
-		c.JSON(http.StatusUnprocessableEntity, gin.H{
-			"status":http.StatusUnprocessableEntity,
-			"error":errList,
-		})
-	}
+	}	
 
 	uid, err := auth.ExtractTokenID(c.Request)
 	if err != nil{
@@ -94,7 +83,7 @@ func (server *Server) CreateTodo(c *gin.Context) {
 	todo.Prepare()
 
 	errorMessages := todo.Validate()
-	if errorMessages != nil {
+	if len(errorMessages) > 1 {
 		errList["StatusUnprocessableEntity"] = "StatusUnprocessableEntity"
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": http.StatusUnprocessableEntity,
@@ -271,9 +260,10 @@ func (server *Server) UpdateATodo(c *gin.Context) {
 	todoUpdatee.ID = todoA.ID
 	todoUpdatee.AuthorID = todoA.AuthorID
 
-	
-	err = todoUpdatee.Validate()
-	if err != nil {
+	todoUpdatee.Prepare()
+	errorMessages := todoUpdatee.Validate()
+	if len (errorMessages) > 0 {
+		errList = errorMessages
 		
 		errList["Unmarshal_error"] = "Cannot unmarshal body"
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -319,7 +309,7 @@ func (server *Server) DeleteATodo(c *gin.Context) {
 
 	pid, err := strconv.ParseUint(todoID,10, 64)
 	if err != nil {
-		errList["Invalid_request"] = "Invalid requestr"
+		errList["Invalid_request"] = "Invalid request"
 		c.JSON(http.StatusBadRequest,gin.H{
 
 			"status":http.StatusBadRequest,
@@ -368,9 +358,11 @@ func (server *Server) DeleteATodo(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusNoContent, gin.H{
-		"status":   http.StatusNoContent,
-		"response": "",
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":   http.StatusOK,
+		"response": "Todo deleted",
 	})
+	
 
 }

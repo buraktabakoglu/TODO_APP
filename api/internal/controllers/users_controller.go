@@ -224,7 +224,9 @@ func (server *Server) UpdateUser(c *gin.Context) {
 }
 // @Summary delete a users item by ID
 // @ID delete-users-by-id
+// @Accept  json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param id path integer true "users ID"
 // @Success 200 {object} models.User
 // @Router /api/users/{id} [delete]
@@ -275,4 +277,9 @@ func (server *Server) DeleteUser(c *gin.Context) {
 		})
 		return
 	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":   http.StatusOK,
+		"response": "User deleted",
+	})
 }

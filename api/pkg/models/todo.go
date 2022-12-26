@@ -34,18 +34,25 @@ func (p *Todo) Prepare() {
 
 
 //Validate
-func (p *Todo) Validate() error {
+func (p *Todo) Validate() map[string]string {
+
+	var err error
+
+	var errorMessages = make(map[string]string)
 
 	if p.Status == "" {
 		err = errors.New("required Status")
+		errorMessages["Required_Status"] = err.Error()
 	}
 	if p.Description == "" {
 		err = errors.New("required Description")
+		errorMessages["Required_Description"] = err.Error()
 	}
 	if p.AuthorID < 1 {
 		err = errors.New("required Author")
+		errorMessages["Required_author"] = err.Error()
 	}
-	return nil
+	return errorMessages
 }
 //CreateTodo
 func (p *Todo) CreateTodo(db *gorm.DB) (*Todo, error) {

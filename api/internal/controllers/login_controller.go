@@ -12,6 +12,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// @Summary Login
+// @Description Logs in a user and returns a JWT
+// @Produce json
+// @Param body body models.User true "User email and password"
+// @Success 200 string token
+// @Router /api/users/login [post]
+// @Security ApiKeyAuth
 func (server *Server) Login(c *gin.Context) {
 	
 	
@@ -59,7 +66,16 @@ func (server *Server) Login(c *gin.Context) {
 	
 }
 
-
+// SignIn godoc
+// @Summary Sign in user and get token
+// @Description Get token for authenticated user
+// @Produce json
+// @Param email query string true "User email"
+// @Param password query string true "User password"
+// @Success 200 string token
+// @Failure 400 string Error
+// @Failure 401 string Error
+// @Router /api/signin [post]
 func (server *Server) SignIn(email, password string) (string, error) {
 
 	var err error
@@ -75,4 +91,31 @@ func (server *Server) SignIn(email, password string) (string, error) {
 		return "", err
 	}
 	return auth.CreateToken(uint32(user.ID))
+}
+
+
+// Logout godoc
+// @Summary Logout a user
+// @Description Revokes the user's access token
+// @Produce text/plain
+// @Success 200 {string} string "Old cookie deleted and token blacklisted. Logged out!"
+// @Router /api/users/logout [get]
+// @Security ApiKeyAuth
+func (server *Server) Logout(c *gin.Context) {
+	
+	tokenString, err := c.Cookie("token")
+	if err != nil {
+		c.String(http.StatusUnauthorized, "Token not found in cookie\n")
+		return
+	}
+	
+	// Blacklist the token
+	result := server.DB.Exec("INSERT INTO blacklisted_tokens (token) VALUES (?)", tokenString)
+	if err := result.Error; err != nil {
+		c.String(http.StatusInternalServerError, "Error blacklisting the token\n")
+		return
+	}
+
+	c.SetCookie("token", "", -1, "", "", false, true)
+	c.String(http.StatusOK, "Old cookie deleted and token blacklisted. Logged out!\n")
 }

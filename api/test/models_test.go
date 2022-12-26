@@ -96,7 +96,7 @@ func seedOneUser() (models.User, error) {
 	user := models.User{
 		Nickname: "naber",
 		Email:    "naber17@gmail.com",
-		Password: "password17",
+		Password: "password",
 	}
 
 	err := server.DB.Model(&models.User{}).Create(&user).Error
@@ -112,12 +112,12 @@ func seedUsers() error {
 		{
 			Nickname: "burak tabak",
 			Email:    "burak12@gmail.com",
-			Password: "password12",
+			Password: "password",
 		},
 		{
 			Nickname: "banshe tabak",
 			Email:    "banshe13@gmail.com",
-			Password: "password13",
+			Password: "password",
 		},
 	}
 
@@ -184,12 +184,12 @@ func seedUsersAndTodos() ([]models.User, []models.Todo, error) {
 		{
 			Nickname: "gandalf",
 			Email:    "gandalf@gmail.com",
-			Password: "password123",
+			Password: "password",
 		},
 		{
 			Nickname: "yildimamk",
 			Email:    "yildim@gmail.com",
-			Password: "password11",
+			Password: "password",
 		},
 	}
 	var todos = []models.Todo{
