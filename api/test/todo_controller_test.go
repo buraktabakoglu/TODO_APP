@@ -45,17 +45,17 @@ func TestCreateTodo(t *testing.T) {
 		tokenGiven string
 	}{
 		{
-			inputJSON:  `{"status":"The status", "description": "the description"}`,
+			inputJSON:  `{"status":"The status on", "description": "the description on"}`,
 			statusCode: 201,
 			tokenGiven: tokenString,
-			status:      "The status",
-			description:    "the description",
+			status:      "The status on",
+			description:    "the description on",
 		},
 		{
 			
-			inputJSON:  `{"status":"The status", "description": "the description"}`,
-			statusCode: 500,
-			tokenGiven: tokenString,
+			inputJSON:  `{"status":"The statussss", "description": "the descriptionsss"}`,
+			statusCode: 401,
+			tokenGiven: "tokenString",
 		},
 		{
 			

@@ -13,7 +13,7 @@ import (
 )
 
 type User struct {
-	ID        int32     `gorm:"primary_key;auto_increment" json:"id"`
+	ID        uint32     `gorm:"primary_key;auto_increment" json:"id"`
 	Nickname  string    `gorm:"size:255;not null;unique" json:"nickname"`
 	Email     string    `gorm:"size:100;not null;unique" json:"email"`
 	Password  string    `gorm:"size:100;not null;" json:"password"`
@@ -204,7 +204,7 @@ func (u *User) UpdatePassword(db *gorm.DB) error {
 	db = db.Debug().Model(&User{}).Where("email = ?", u.Email).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
 			"password":  u.Password,
-			"update_at": time.Now(),
+			"updated_at": time.Now(),
 		},
 	)
 	if db.Error != nil {

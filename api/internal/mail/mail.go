@@ -19,7 +19,7 @@ type SendMailer interface {
 	SendResetPassword(string, string, string, string, string)  (*EmailResponse, error)
 }
 var (
-	SendMail SendMailer = &sendMail{} //this is useful when we start testing
+	SendMail SendMailer = &sendMail{} 
 )
 
 type EmailResponse struct {
@@ -36,9 +36,9 @@ func (s *sendMail) SendResetPassword(ToUser string, FromAdmin string, Token stri
 	}
 	var forgotUrl string
 	if os.Getenv("APP_ENV") == "production" {
-		forgotUrl = "https://seamflow.com/resetpassword/" + Token //this is the url of the frontend app
+		forgotUrl = "https://seamflow.com/resetpassword/" + Token 
 	} else {
-		forgotUrl = "http://127.0.0.1:3000/resetpassword/" + Token //this is the url of the local frontend app
+		forgotUrl = "http://127.0.0.1:3000/resetpassword/" + Token 
 	}
 	email := hermes.Email{
 		Body: hermes.Body{

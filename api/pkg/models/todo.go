@@ -133,3 +133,12 @@ func (p *Todo) DeleteATodo(db *gorm.DB, pid uint64, uid uint32) (int64, error) {
 	}
 	return db.RowsAffected, nil
 }
+
+func (c *Todo) DeleteUserTodos(db *gorm.DB, uid uint32) (int64, error) {
+	todos := []Todo{}
+	db = db.Debug().Model(&Todo{}).Where("author_id = ?", uid).Find(&todos).Delete(&todos)
+	if db.Error != nil {
+		return 0, db.Error
+	}
+	return db.RowsAffected, nil
+}

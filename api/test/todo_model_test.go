@@ -68,7 +68,7 @@ func TestGetTodoByID(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Error refreshing user and Todo table: %v\n", err)
 	}
-	todo, err := seedOneUserAndOneTodo()
+	_,todo, err := seedOneUserAndOneTodo()
 	if err != nil {
 		log.Fatalf("Error Seeding table")
 	}
@@ -88,14 +88,14 @@ func TestUpdateATodo(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Error refreshing user and todo table: %v\n", err)
 	}
-	todo, err := seedOneUserAndOneTodo()
+	_,todo, err := seedOneUserAndOneTodo()
 	if err != nil {
 		log.Fatalf("Error Seeding table")
 	}
 	todoUpdate := models.Todo{
 		
-		Status:    "modiUpdate",
-		Description:  "modiupdate@gmail.com",
+		Status:  "modiUpdate",
+		Description: "modiupdate@gmail.com",
 		AuthorID: todo.AuthorID,
 	}
 	updatedTodo, err := todoUpdate.UpdateATodo(server.DB)
@@ -103,7 +103,9 @@ func TestUpdateATodo(t *testing.T) {
 		t.Errorf("this is the error updating the user: %v\n", err)
 		return
 	}
+	
 	assert.Equal(t, updatedTodo.ID, todoUpdate.ID)
+	
 	
 	
 }
@@ -114,15 +116,34 @@ func TestDeleteATodo(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Error refreshing user and todo table: %v\n", err)
 	}
-	todo, err := seedOneUserAndOneTodo()
+	_,todo, err := seedOneUserAndOneTodo()
 	if err != nil {
 		log.Fatalf("Error Seeding tables")
 	}
-	isDeleted, err := todoInstance.DeleteATodo(server.DB, todo.ID, todo.AuthorID)
+	isDeleted, err := todo.DeleteATodo(server.DB, todo.ID, todo.AuthorID)
 	if err != nil {
 		t.Errorf("this is the error updating the user: %v\n", err)
 		return
 	}
 	
 	assert.Equal(t, isDeleted, int64(1))
+}
+
+func TestDeleteUserTodos(t *testing.T) {
+
+	err := refreshUserAndTodoTable()
+	if err != nil {
+		log.Fatalf("Error refreshing user and todo table: %v\n", err)
+	}
+	user, _, err := seedOneUserAndOneTodo()
+	if err != nil {
+		log.Fatalf("Error Seeding tables")
+	}
+
+	numberDeleted, err := todoInstance.DeleteUserTodos(server.DB, user.ID)
+	if err != nil {
+		t.Errorf("this is the error deleting the post: %v\n", err)
+		return
+	}
+	assert.Equal(t, numberDeleted, int64(1))
 }

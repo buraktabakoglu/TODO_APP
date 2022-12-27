@@ -91,7 +91,7 @@ func refreshUserTable() error {
 
 func seedOneUser() (models.User, error) {
 
-	refreshUserTable()
+	
 
 	user := models.User{
 		Nickname: "naber",
@@ -101,12 +101,18 @@ func seedOneUser() (models.User, error) {
 
 	err := server.DB.Model(&models.User{}).Create(&user).Error
 	if err != nil {
-		log.Fatalf("cannot seed users table: %v", err)
+		return models.User{},err
 	}
 	return user, nil
 }
 
-func seedUsers() error {
+func seedUsers() ([]models.User, error) {
+
+	var err error
+
+	if err != nil {
+		return nil, err
+	}
 
 	users := []models.User{
 		{
@@ -124,10 +130,10 @@ func seedUsers() error {
 	for i := range users {
 		err := server.DB.Model(&models.User{}).Create(&users[i]).Error
 		if err != nil {
-			return err
+			return []models.User{}, err
 		}
 	}
-	return nil
+	return users,nil
 }
 
 func refreshUserAndTodoTable() error {
@@ -145,13 +151,11 @@ func refreshUserAndTodoTable() error {
 	return nil
 }
 
-func seedOneUserAndOneTodo() (models.Todo, error) {
+func seedOneUserAndOneTodo() (models.User, models.Todo, error) {
 	
 
-	err := refreshUserAndTodoTable()
-	if err != nil {
-		return models.Todo{}, err
-	}
+	
+	
 	user := models.User{
 		Nickname: "hobbit",
 		Email:    "hobbit@gmail.com",
@@ -159,18 +163,18 @@ func seedOneUserAndOneTodo() (models.Todo, error) {
 	}
 	err = server.DB.Model(&models.User{}).Create(&user).Error
 	if err != nil {
-		return models.Todo{}, err
+		return models.User{},models.Todo{},err
 	}
 	todo := models.Todo{
 		Status:"This is the title hobbit",
 		Description:"This is the content hobbit",
-		AuthorID: uint32(user.ID),
+		AuthorID: user.ID,
 	}
 	err = server.DB.Model(&models.Todo{}).Create(&todo).Error
 	if err != nil {
-		return models.Todo{}, err
+		return models.User{},models.Todo{},err
 	}
-	return todo, nil
+	return user,todo,nil
 }
 
 func seedUsersAndTodos() ([]models.User, []models.Todo, error) {
@@ -216,4 +220,31 @@ func seedUsersAndTodos() ([]models.User, []models.Todo, error) {
 		}
 	}
 	return users, todos, nil
+}
+
+func refreshUserAndResetPasswordTable() error {
+	err := server.DB.DropTableIfExists(&models.User{}, &models.ResetPassword{}).Error
+	if err != nil {
+		return err
+	}
+	err = server.DB.AutoMigrate(&models.User{}, &models.ResetPassword{}).Error
+	if err != nil {
+		return err
+	}
+	log.Printf("Successfully refreshed user and resetpassword tables")
+	return nil
+}
+
+
+func seedResetPassword() (models.ResetPassword, error) {
+
+	resetDetails := models.ResetPassword{
+		Token: "awesometoken",
+		Email: "naber17@gmail.com",
+	}
+	err := server.DB.Model(&models.ResetPassword{}).Create(&resetDetails).Error
+	if err != nil {
+		return models.ResetPassword{}, err
+	}
+	return resetDetails, nil
 }

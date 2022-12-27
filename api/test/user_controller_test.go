@@ -29,33 +29,33 @@ func TestCreateUser(t *testing.T) {
 		email      string
 	}{
 		{
-			inputJSON:  `{"username":"Pet", "email": "pet@example.com", "password": "password"}`,
+			inputJSON:  `{"nickname":"Pet", "email": "pet@example.com", "password": "password"}`,
 			statusCode: 201,
-			nickname:   "",
+			nickname:   "Pet",
 			email:      "pet@example.com",
 		},
 		{
-			inputJSON:  `{"username":"Frank", "email": "pet@example.com", "password": "password"}`,
+			inputJSON:  `{"nickname":"Frank", "email": "pet@example.com", "password": "password"}`,
 			statusCode: 500,
 		},
 		{
-			inputJSON:  `{"username":"Pet", "email": "grand@example.com", "password": "password"}`,
+			inputJSON:  `{"nickname":"Pet", "email": "grand@example.com", "password": "password"}`,
 			statusCode: 500,
 		},
 		{
-			inputJSON:  `{"username":"Kan", "email": "kanexample.com", "password": "password"}`,
+			inputJSON:  `{"nickname":"Kan", "email": "kanexample.com", "password": "password"}`,
 			statusCode: 422,
 		},
 		{
-			inputJSON:  `{"username": "", "email": "kan@example.com", "password": "password"}`,
+			inputJSON:  `{"nickname": "Pet", "email": "kan@example.com", "password": "password"}`,
 			statusCode: 500,
 		},
 		{
-			inputJSON:  `{"username": "Kan", "email": "", "password": "password"}`,
+			inputJSON:  `{"nickname": "Kan", "email": "", "password": "password"}`,
 			statusCode: 422,
 		},
 		{
-			inputJSON:  `{"username": "Kan", "email": "kan@example.com", "password": ""}`,
+			inputJSON:  `{"nickname": "Kan", "email": "kan@example.com", "password": ""}`,
 			statusCode: 422,
 		},
 	}
@@ -117,7 +117,7 @@ func TestGetUsers(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = seedUsers()
+	_,err = seedUsers()
 	if err != nil {
 		log.Fatal(err)
 	}

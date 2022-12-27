@@ -64,7 +64,7 @@ import (
 	resetPassword := models.ResetPassword{}
 	resetPassword.Prepare()
 
-	//generate the token:
+	
 	token := auth.TokenHash(user.Email)
 	resetPassword.Email = user.Email
 	resetPassword.Token = token
@@ -79,7 +79,7 @@ import (
 		return
 	}
 	fmt.Println("THIS OCCURRED HERE")
-	//Send welcome mail to the user:
+	
 	response, err := mail.SendMail.SendResetPassword(resetDetails.Email, os.Getenv("SENDGRID_FROM"), resetDetails.Token, os.Getenv("SENDGRID_API_KEY"), os.Getenv("APP_ENV"))
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
