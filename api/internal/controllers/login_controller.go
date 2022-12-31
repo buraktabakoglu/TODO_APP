@@ -20,8 +20,6 @@ import (
 // @Router /api/users/login [post]
 // @Security ApiKeyAuth
 func (server *Server) Login(c *gin.Context) {
-	
-	
 
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
@@ -58,12 +56,13 @@ func (server *Server) Login(c *gin.Context) {
 			"error":  formattedError,
 		})
 		return
-	}else 
-	{c.JSON(http.StatusOK, gin.H{
-		"status":   http.StatusOK,
-		"response": token,
-	})}
-	
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"status":   http.StatusOK,
+			"response": token,
+		})
+	}
+
 }
 
 // SignIn godoc
@@ -93,7 +92,6 @@ func (server *Server) SignIn(email, password string) (string, error) {
 	return auth.CreateToken(uint32(user.ID))
 }
 
-
 // Logout godoc
 // @Summary Logout a user
 // @Description Revokes the user's access token
@@ -102,20 +100,23 @@ func (server *Server) SignIn(email, password string) (string, error) {
 // @Router /api/users/logout [get]
 // @Security ApiKeyAuth
 func (server *Server) Logout(c *gin.Context) {
-	
-	tokenString, err := c.Cookie("token")
-	if err != nil {
-		c.String(http.StatusUnauthorized, "Token not found in cookie\n")
+
+	tokenString := auth.ExtractToken(c.Request)
+
+	if err := auth.TokenValid(c.Request); err != nil {
+
+		c.AbortWithError(http.StatusUnauthorized, err)
 		return
 	}
-	
-	// Blacklist the token
-	result := server.DB.Exec("INSERT INTO blacklisted_tokens (token) VALUES (?)", tokenString)
+
+	tokenHash := auth.TokenHash(tokenString)
+
+	result := server.DB.Exec("INSERT INTO blacklisted_tokens (token) VALUES (?)", tokenHash)
 	if err := result.Error; err != nil {
-		c.String(http.StatusInternalServerError, "Error blacklisting the token\n")
+
+		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
 	c.SetCookie("token", "", -1, "", "", false, true)
-	c.String(http.StatusOK, "Old cookie deleted and token blacklisted. Logged out!\n")
 }
