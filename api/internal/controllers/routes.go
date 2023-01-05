@@ -22,14 +22,14 @@ func (s *Server) initializeRoutes() {
 		//Login
 		rou.POST("/login", s.Login)
 		//Logout
-		rou.DELETE("/logout", middlewares.TokenAuthMiddleware(), s.Logout)
+		rou.DELETE("/logout", s.Logout)
 
 		//Create user
 		rou.POST("/users", middlewares.TokenAuthMiddleware(), s.CreateUser)
 		//Read-all users
-		rou.GET("/users", s.GetUsers)
+		rou.GET("/users",middlewares.TokenAuthMiddleware(), s.GetUsers)
 		//Read user
-		rou.GET("/users/:id", s.GetUser)
+		rou.GET("/users/:id",middlewares.TokenAuthMiddleware(), s.GetUser)
 		//Update user
 		rou.PUT("/users/:id", middlewares.TokenAuthMiddleware(), s.UpdateUser)
 		//Delete user
@@ -38,9 +38,9 @@ func (s *Server) initializeRoutes() {
 		rou.POST("/todos", middlewares.TokenAuthMiddleware(), s.CreateTodo)
 
 		//Read-all todos
-		rou.GET("/todos", s.GetTodos)
+		rou.GET("/todos",middlewares.TokenAuthMiddleware(), s.GetTodos)
 		//Read todo
-		rou.GET("/todos/:id", s.GetTodo)
+		rou.GET("/todos/:id",middlewares.TokenAuthMiddleware(), s.GetTodo)
 		//Update todo
 		rou.PUT("/todos/:id", middlewares.TokenAuthMiddleware(), s.UpdateATodo)
 		//Delete todo

@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/stretchr/testify v1.8.1
 	github.com/swaggo/files v1.0.0
-	github.com/swaggo/gin-swagger v1.3.2
+	github.com/swaggo/gin-swagger v1.5.3
 	github.com/swaggo/swag v1.8.9
 	gopkg.in/go-playground/assert.v1 v1.2.1
 )
@@ -69,6 +69,7 @@ require (
 	github.com/badoux/checkmail v1.2.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.8.2
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.4.0
 	github.com/lib/pq v1.10.7 // indirect

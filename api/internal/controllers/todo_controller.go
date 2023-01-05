@@ -117,24 +117,31 @@ func (server *Server) CreateTodo(c *gin.Context) {
 // @Success 200 {object} models.Todo
 // @Router /api/todos [get]
 // @Security JWT
-	func (server *Server) GetTodos(c *gin.Context) {
-
-		todo := models.Todo{}
-	
-		todos, err := todo.FindAllTodos(server.DB)
-		if err != nil {
-			errList["No_todo"] = "No Todo Found"
-			c.JSON(http.StatusNotFound, gin.H{
-				"status": http.StatusNotFound,
-				"error":  errList,
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"status":   http.StatusOK,
-			"response": todos,
-		})
-	}
+func (server *Server) GetTodos(c *gin.Context) {
+    userID, err := auth.ExtractTokenID(c.Request)
+    if err != nil {
+        errList["Unauthorized"] = "Unauthorized"
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "status": http.StatusUnauthorized,
+            "error":  errList,
+        })
+        return
+    }
+    todo := models.Todo{}
+    todos, err := todo.FindTodosByUserID(server.DB, userID)
+    if err != nil {
+        errList["No_todo"] = "No Todo Found"
+        c.JSON(http.StatusNotFound, gin.H{
+            "status": http.StatusNotFound,
+            "error":  errList,
+        })
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{
+        "status":   http.StatusOK,
+        "response": todos,
+    })
+}
 
 //GetTodoByID godoc
 // @Summary                    Get Todo

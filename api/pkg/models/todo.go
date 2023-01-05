@@ -71,22 +71,14 @@ func (p *Todo) CreateTodo(db *gorm.DB) (*Todo, error) {
 }
 
 //FindAllTodos
-func (p *Todo) FindAllTodos(db *gorm.DB) (*[]Todo, error) {
-	var err error
-	todos := []Todo{}
-	err = db.Debug().Model(&Todo{}).Limit(100).Find(&todos).Error
-	if err != nil {
-		return &[]Todo{}, err
-	}
-	if len(todos) > 0 {
-		for i := range todos {
-			err := db.Debug().Model(&User{}).Where("id = ?", todos[i].AuthorID).Take(&todos[i].Author).Error
-			if err != nil {
-				return &[]Todo{}, err
-			}
-		}
-	}
-	return &todos, nil
+func (p *Todo) FindTodosByUserID(db *gorm.DB, userID uint32) (*[]Todo, error) {
+    var err error
+    todos := []Todo{}
+    err = db.Debug().Model(&Todo{}).Where("author_id = ?", userID).Limit(100).Find(&todos).Error
+    if err != nil {
+        return &[]Todo{}, err
+    }
+    return &todos, nil
 }
 //FindTodoByID
 func (p *Todo) FindTodoByID(db *gorm.DB, pid uint64) (*Todo, error) {

@@ -1,5 +1,20 @@
 basePath: /
 definitions:
+  models.ResetPassword:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      token:
+        type: string
+      updatedAt:
+        type: string
+    type: object
   models.Todo:
     properties:
       author:
@@ -126,18 +141,6 @@ paths:
       security:
       - JWT: []
       summary: Get Todo
-    post:
-      description: Add a new Todo
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Todo'
-      security:
-      - JWT: []
-      summary: Create Todo
   /api/users:
     get:
       operationId: get-users-by-id
@@ -215,26 +218,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Register User
-  /api/users/login:
-    post:
-      description: Logs in a user and returns a JWT
-      parameters:
-      - description: User email and password
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/models.User'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-      security:
-      - ApiKeyAuth: []
-      summary: Login
   /api/users/logout:
     get:
       description: Revokes the user's access token
@@ -248,4 +231,119 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Logout a user
+  /login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email
+        in: body
+        name: email
+        required: true
+        schema:
+          type: string
+      - description: Password
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Logs a user in
+      tags:
+      - authorization
+  /password/forgot:
+    post:
+      consumes:
+      - application/json
+      description: Sends an email to the user with a link to reset their password
+      parameters:
+      - description: User email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResetPassword'
+      summary: Forgot password
+      tags:
+      - user
+  /password/reset:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Token
+        in: body
+        name: token
+        required: true
+        schema:
+          type: string
+      - description: New Password
+        in: body
+        name: new_password
+        required: true
+        schema:
+          type: string
+      - description: Retype Password
+        in: body
+        name: retype_password
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResetPassword'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ResetPassword'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ResetPassword'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/models.ResetPassword'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ResetPassword'
+      summary: Reset a user's password
+      tags:
+      - authorization
+  /todos:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Todo
+        in: body
+        name: todo
+        required: true
+        schema:
+          $ref: '#/definitions/models.Todo'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Todo'
+      security:
+      - JWT: []
+      summary: Create a new todo item
+      tags:
+      - todo
 swagger: "2.0"

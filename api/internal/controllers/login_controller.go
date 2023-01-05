@@ -100,21 +100,18 @@ func (server *Server) SignIn(email, password string) (string, error) {
 // @Router /api/users/logout [get]
 // @Security ApiKeyAuth
 func (server *Server) Logout(c *gin.Context) {
-
-	tokenString := auth.ExtractToken(c.Request)
-
-	if err := auth.TokenValid(c.Request); err != nil {
-
-		c.AbortWithError(http.StatusUnauthorized, err)
-		return
-	}
+	tokenString := auth.ExtractToken(c.Request)	
 
 	tokenHash := auth.TokenHash(tokenString)
 
-	result := server.DB.Exec("INSERT INTO blacklisted_tokens (token) VALUES (?)", tokenHash)
-	if err := result.Error; err != nil {
-
+	// Redis'e bağlan ve tokeni "blacklisted_tokens" setine ekle
+	redisConn := auth.GetRedisConnection()
+	if err := redisConn.SAdd("blacklisted_tokens", tokenHash).Err(); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	if err := auth.TokenValid(c.Request); err != nil {
+		c.AbortWithError(http.StatusUnauthorized, err)
 		return
 	}
 

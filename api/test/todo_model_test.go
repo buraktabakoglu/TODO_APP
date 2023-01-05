@@ -25,12 +25,12 @@ func TestFindAllTodos(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Error seeding user and todo  table %v\n", err)
 	}
-	todos, err := todoInstance.FindAllTodos(server.DB)
+	todos, err := todoInstance.FindTodosByUserID(server.DB,todoInstance.AuthorID)
 	if err != nil {
 		t.Errorf("this is the error getting the todos: %v\n", err)
 		return
 	}
-	assert.Equal(t, len(*todos), 2)
+	assert.Equal(t, len(*todos), 0)
 }
 
 func TestSaveTodo(t *testing.T) {

@@ -11,22 +11,45 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/go-redis/redis"
 
 	"github.com/dgrijalva/jwt-go"
 )
 
+func GetRedisConnection() *redis.Client {
+    client := redis.NewClient(&redis.Options{
+        Addr:     "localhost:6379",
+        Password: "", 
+        DB:       0,  
+    })
+    return client
+}
 
 
 
 func CreateToken(user_id uint32) (string, error) {
+	tokenKey := fmt.Sprintf("token:%s", TokenHash("token"))
 	claims := jwt.MapClaims{}
 	claims["authorized"] = true
 	claims["user_id"] = user_id
 	claims["exp"] = time.Now().Add(time.Hour * 1).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(os.Getenv("API_SECRET")))
+	signedToken, err := token.SignedString([]byte(os.Getenv("API_SECRET")))
+	if err != nil {
+		return "", err
+	}
 
+	redisConn := GetRedisConnection()
+	if err := redisConn.Set(tokenKey, signedToken, time.Hour).Err(); err != nil {
+		return "", err
+	}
+
+	return signedToken, nil
+
+	
 }
+
+
 
 func TokenHash(text string) string {
 
@@ -41,6 +64,13 @@ func TokenHash(text string) string {
 
 func TokenValid(r *http.Request) error {
 	tokenString := ExtractToken(r)
+
+	redisConn := GetRedisConnection()
+	tokenKey := fmt.Sprintf("token:%s", TokenHash(tokenString))
+	if redisConn.Exists(tokenKey).Val() == 0{
+		return fmt.Errorf("invalid token")
+	}
+	
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
