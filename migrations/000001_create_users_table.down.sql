@@ -1,0 +1,11 @@
+BEGIN;
+
+DROP TABLE IF EXISTS users cascade;
+
+COMMIT;
+
+BEGIN;
+
+DROP TABLE IF EXISTS todos cascade;
+
+COMMIT;

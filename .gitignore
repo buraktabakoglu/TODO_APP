@@ -20,14 +20,5 @@ logs.txt
 .idea/
 secret.md
 app.env*
-data
-data/db/base/1/112
-data/db/base/1/113
-data/db/pg_wal/000000010000000000000001
-data/db/base/1/112
-data/db/base/1/113
-data/db/base/1/174
-data/db/base/1/175
-data/db/base/1/548
-data/db/base/1/826
+data/
 vendor
