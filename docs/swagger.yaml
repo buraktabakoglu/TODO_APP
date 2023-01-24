@@ -1,20 +1,5 @@
 basePath: /
 definitions:
-  models.ResetPassword:
-    properties:
-      createdAt:
-        type: string
-      deletedAt:
-        type: string
-      email:
-        type: string
-      id:
-        type: integer
-      token:
-        type: string
-      updatedAt:
-        type: string
-    type: object
   models.Todo:
     properties:
       author:
@@ -61,6 +46,74 @@ info:
   title: Go + Gin Todo API
   version: "1.0"
 paths:
+  /api/activate/{token}:
+    get:
+      consumes:
+      - application/json
+      description: Activate a User by token
+      parameters:
+      - description: Activation Token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      security:
+      - ApiKeyAuth: []
+      summary: Activate a User by token
+      tags:
+      - Users
+  /api/forgotpassword:
+    post:
+      consumes:
+      - application/json
+      description: Send a password reset link to user's email
+      parameters:
+      - description: User email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      summary: Forgot Password
+  /api/resetpassword/{token}:
+    post:
+      consumes:
+      - application/json
+      description: Resets user's password with a token
+      parameters:
+      - description: Password reset token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: New password and retype password
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      summary: Reset Password
   /api/signin:
     post:
       description: Get token for authenticated user
@@ -93,38 +146,69 @@ paths:
       summary: Sign in user and get token
   /api/todos:
     get:
-      description: Get All TODOs
+      description: Retrieves all todos created by the authenticated user
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Todo'
+            items:
+              $ref: '#/definitions/models.Todo'
+            type: array
       security:
-      - JWT: []
+      - ApiKeyAuth: []
       summary: Get Todos
+    post:
+      description: Creates a Todo item and assigns it to the authenticated user
+      parameters:
+      - description: Todo content and status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Todo'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: json
+      security:
+      - ApiKeyAuth: []
+      summary: Create a Todo
   /api/todos/{id}:
     delete:
-      description: Delete TODO by ID
+      consumes:
+      - application/json
+      description: Delete a Todo by ID
       parameters:
       - description: Todo ID
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            $ref: '#/definitions/models.Todo'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
       security:
-      - JWT: []
-      summary: Delete Todo
+      - ApiKeyAuth: []
+      summary: Delete a Todo by ID
+      tags:
+      - Todos
     get:
-      description: Get a TODO by ID
+      description: Retrieves a todo by ID
       parameters:
       - description: Todo ID
         in: path
@@ -139,32 +223,90 @@ paths:
           schema:
             $ref: '#/definitions/models.Todo'
       security:
-      - JWT: []
-      summary: Get Todo
+      - ApiKeyAuth: []
+      summary: Get Todo by ID
+    put:
+      consumes:
+      - application/json
+      description: Update a Todo by ID
+      parameters:
+      - description: Todo ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Todo
+        in: body
+        name: todoUpdatee
+        required: true
+        schema:
+          $ref: '#/definitions/models.Todo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Todo'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update a Todo by ID
+      tags:
+      - Todos
   /api/users:
     get:
-      operationId: get-users-by-id
-      parameters:
-      - description: users ID
-        in: path
-        name: id
-        required: true
-        type: integer
+      consumes:
+      - application/json
+      description: Get all users
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
-      summary: get a users item by ID
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all users
+      tags:
+      - Users
   /api/users/{id}:
     delete:
       consumes:
       - application/json
-      operationId: delete-users-by-id
+      description: Delete a user by ID
       parameters:
-      - description: users ID
+      - description: User ID
         in: path
         name: id
         required: true
@@ -176,28 +318,45 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - ApiKeyAuth: []
-      summary: delete a users item by ID
+      summary: Delete a user by ID
+      tags:
+      - Users
     get:
-      produces:
+      consumes:
       - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.User'
-      security:
-      - ApiKeyAuth: []
-      summary: Retrieves user based on given ID
-    patch:
-      operationId: patch-todo-by-id
+      description: Get a user by ID
       parameters:
-      - description: users ID
+      - description: User ID
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -205,7 +364,27 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.User'
-      summary: patch a users item by ID
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a user by ID
+      tags:
+      - Users
     post:
       description: Add a new User
       produces:
@@ -218,53 +397,19 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Register User
-  /api/users/logout:
-    get:
-      description: Revokes the user's access token
-      produces:
-      - text/plain
-      responses:
-        "200":
-          description: Old cookie deleted and token blacklisted. Logged out!
-          schema:
-            type: string
-      security:
-      - ApiKeyAuth: []
-      summary: Logout a user
-  /login:
-    post:
+    put:
       consumes:
       - application/json
+      description: Update a User by ID
       parameters:
-      - description: Email
-        in: body
-        name: email
+      - description: User ID
+        in: path
+        name: id
         required: true
-        schema:
-          type: string
-      - description: Password
+        type: string
+      - description: Update User
         in: body
-        name: password
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-      summary: Logs a user in
-      tags:
-      - authorization
-  /password/forgot:
-    post:
-      consumes:
-      - application/json
-      description: Sends an email to the user with a link to reset their password
-      parameters:
-      - description: User email
-        in: body
-        name: body
+        name: user
         required: true
         schema:
           $ref: '#/definitions/models.User'
@@ -274,76 +419,28 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.ResetPassword'
-      summary: Forgot password
-      tags:
-      - user
-  /password/reset:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Token
-        in: body
-        name: token
-        required: true
-        schema:
-          type: string
-      - description: New Password
-        in: body
-        name: new_password
-        required: true
-        schema:
-          type: string
-      - description: Retype Password
-        in: body
-        name: retype_password
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.ResetPassword'
+            $ref: '#/definitions/models.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/models.ResetPassword'
+            additionalProperties:
+              type: string
+            type: object
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/models.ResetPassword'
-        "422":
-          description: Unprocessable Entity
-          schema:
-            $ref: '#/definitions/models.ResetPassword'
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/models.ResetPassword'
-      summary: Reset a user's password
-      tags:
-      - authorization
-  /todos:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Todo
-        in: body
-        name: todo
-        required: true
-        schema:
-          $ref: '#/definitions/models.Todo'
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Todo'
+            additionalProperties:
+              type: string
+            type: object
       security:
-      - JWT: []
-      summary: Create a new todo item
+      - ApiKeyAuth: []
+      summary: Update a User by ID
       tags:
-      - todo
+      - Users
 swagger: "2.0"

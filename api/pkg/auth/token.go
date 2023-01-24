@@ -2,6 +2,7 @@ package auth
 
 import (
 	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/go-redis/redis"
 
 	"github.com/dgrijalva/jwt-go"
@@ -23,6 +25,12 @@ func GetRedisConnection() *redis.Client {
         DB:       0,  
     })
     return client
+}
+
+func RegisterCreateToken(email string, createdAt time.Time) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(email + createdAt.String()))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 

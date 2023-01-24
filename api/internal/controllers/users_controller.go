@@ -1,12 +1,18 @@
 package controllers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/segmentio/kafka-go"
 
 	"github.com/buraktabakoglu/GOLANGAPPX/api/pkg/auth"
 	"github.com/buraktabakoglu/GOLANGAPPX/api/pkg/models"
@@ -14,16 +20,19 @@ import (
 	//"github.com/gorilla/mux"
 )
 
-//RegisterUser godoc
-// @Summary     Register User
-// @Description Add a new User
+// Register creates a new user account and sends an activation email.
+// @Summary Create a new user account
+// @Description creates a new user account by taking user's email, name, password and other details.
+// @Tags Users
+// @Accept json
 // @Produce json
-// @Success 200 {object} models.User
-// @Router /api/users/{id} [post]
-// @Security ApiKeyAuth
+// @Param user body models.User true "User Details"
+// @Success 201
+// @Failure 400
+// @Failure 500
+// @Router /api/register [post]
 func (server *Server) CreateUser(c *gin.Context) {
 
-	
 	errList = map[string]string{}
 
 	body, err := ioutil.ReadAll(c.Request.Body)
@@ -57,6 +66,7 @@ func (server *Server) CreateUser(c *gin.Context) {
 		})
 		return
 	}
+
 	userCreated, err := user.SaveUser(server.DB)
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
@@ -67,18 +77,46 @@ func (server *Server) CreateUser(c *gin.Context) {
 		})
 		return
 	}
+	token := auth.RegisterCreateToken(user.Email, user.CreatedAt)
+	result := server.DB.Exec("INSERT INTO activation_links(user_id, token, is_used, created_at) VALUES($1, $2, $3, $4)", user.ID, token, false, time.Now())
+	if err := result.Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save activation link"})
+		return
+	}
+
+	go func() {
+		w := kafka.NewWriter(kafka.WriterConfig{
+			Brokers:  []string{os.Getenv("KAFKA_BROKER")},
+			Topic:    "email-topic",
+			Balancer: &kafka.LeastBytes{},
+		})
+		defer w.Close()
+
+		user.Token = token
+		userJSON, _ := json.Marshal(user)
+		w.WriteMessages(context.Background(),
+			kafka.Message{
+				Value: userJSON,
+			},
+		)
+	}()
+
 	c.JSON(http.StatusCreated, gin.H{
 		"status":   http.StatusCreated,
 		"response": userCreated,
 	})
 }
+
 // GetUsers godoc
-// @Summary Retrieves user based on given ID
+// @Summary Get all users
+// @Description Get all users
+// @Tags Users
+// @Accept json
 // @Produce json
-// @Success 200 {object} models.User
-// @Router /api/users/{id} [get]
-// @Security ApiKeyAuth
-func (server *Server) GetUsers(c *gin.Context) {	
+// @Success 200 {array} models.User
+// @Failure 500 {object} map[string]string
+// @Router /api/users [get]
+func (server *Server) GetUsers(c *gin.Context) {
 	errList = map[string]string{}
 
 	user := models.User{}
@@ -97,15 +135,21 @@ func (server *Server) GetUsers(c *gin.Context) {
 		"response": users,
 	})
 }
-// @Summary get a users item by ID
-// @ID get-users-by-id
+
+// GetUser godoc
+// @Summary Get a user by ID
+// @Description Get a user by ID
+// @Tags Users
+// @Accept json
 // @Produce json
-// @Param id path integer true "users ID"
+// @Param id path string true "User ID"
 // @Success 200 {object} models.User
-// @Router /api/users [get]
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/users/{id} [get]
 func (server *Server) GetUser(c *gin.Context) {
 
-	
 	errList = map[string]string{}
 
 	userID := c.Param("id")
@@ -135,19 +179,27 @@ func (server *Server) GetUser(c *gin.Context) {
 		"response": userGotten,
 	})
 }
-// @Summary patch a users item by ID
-// @ID patch-todo-by-id
+
+// UpdateUser godoc
+// @Summary Update a User by ID
+// @Description Update a User by ID
+// @Tags Users
+// @Accept json
 // @Produce json
-// @Param id path integer true "users ID"
+// @Security ApiKeyAuth
+// @Param id path string true "User ID"
+// @Param user body models.User true "Update User"
 // @Success 200 {object} models.User
-// @Router /api/users/{id} [patch]
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/users/{id} [put]
 func (server *Server) UpdateUser(c *gin.Context) {
 
-	
 	errList = map[string]string{}
 
 	userID := c.Param("id")
-	
+
 	uid, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
 		errList["Invalid_request"] = "Invalid Request"
@@ -166,7 +218,7 @@ func (server *Server) UpdateUser(c *gin.Context) {
 			"error":  errList,
 		})
 		return
-	} 
+	}
 	user := models.User{}
 	err = json.Unmarshal(body, &user)
 	if err != nil {
@@ -177,7 +229,7 @@ func (server *Server) UpdateUser(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	tokenID, err := auth.ExtractTokenID(c.Request)
 	if err != nil {
 		errList["Unauthorized"] = "Unauthorized"
@@ -187,7 +239,7 @@ func (server *Server) UpdateUser(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	if tokenID != uint32(uid) {
 		errList["Unauthorized"] = "Unauthorized"
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -195,8 +247,7 @@ func (server *Server) UpdateUser(c *gin.Context) {
 			"error":  errList,
 		})
 		return
-	}		
-	
+	}
 
 	user.Prepare()
 	errorMessages := user.Validate("update")
@@ -222,22 +273,28 @@ func (server *Server) UpdateUser(c *gin.Context) {
 		"response": updatedUser,
 	})
 }
-// @Summary delete a users item by ID
-// @ID delete-users-by-id
-// @Accept  json
+
+// @Summary Delete a user by ID
+// @Description Delete a user by ID
+// @Tags Users
+// @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param id path integer true "users ID"
+// @Param id path integer true "User ID"
 // @Success 200 {object} models.User
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Router /api/users/{id} [delete]
 func (server *Server) DeleteUser(c *gin.Context) {
 
 	var tokenID uint32
 	errList = map[string]string{}
-	
+
 	userID := c.Param("id")
 	user := models.User{}
-	
+
 	uid, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
 		errList["Invalid_request"] = "Invalid Request"
@@ -247,7 +304,7 @@ func (server *Server) DeleteUser(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	tokenID, err = auth.ExtractTokenID(c.Request)
 	if err != nil {
 		errList["Unauthorized"] = "Unauthorized"
@@ -257,7 +314,7 @@ func (server *Server) DeleteUser(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	if tokenID != 0 && tokenID != uint32(uid) {
 		errList["Unauthorized"] = "Unauthorized"
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -267,7 +324,6 @@ func (server *Server) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	
 	_, err = user.DeleteAUser(server.DB, uint32(uid))
 	if err != nil {
 		errList["Other_error"] = "Please try again later"
@@ -282,4 +338,62 @@ func (server *Server) DeleteUser(c *gin.Context) {
 		"status":   http.StatusOK,
 		"response": "User deleted",
 	})
+}
+
+
+
+// ActivateUser godoc
+// @Summary Activate a User by token
+// @Description Activate a User by token
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param token path string true "Activation Token"
+// @Success 200 
+// @Failure 400 
+// @Failure 400 
+// @Failure 500 
+// @Failure 500 
+// @Router /api/activate/{token} [get]
+func (server *Server) ActivateUser(c *gin.Context) {
+	token := c.Param("token")
+	
+
+	dbuser := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	db, err := sql.Open("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbuser, password, dbname))
+	if err != nil {
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect to the database"})
+	return
+	}
+	defer db.Close()
+
+
+	// check if the activation link already used
+	var is_used bool
+	var userID int
+	err = db.QueryRow("SELECT is_used, user_id FROM activation_links WHERE token = $1", token).Scan(&is_used, &userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid activation token"})
+		return
+	}
+	if is_used {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Activation link already used"})
+		return
+	}
+	// Update the user's activation status in the database
+	_, err = db.Exec("UPDATE users SET is_active = true WHERE id = $1", userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate the user"})
+		return
+	}
+	_, err = db.Exec("UPDATE activation_links SET is_used = true WHERE token = $1", token)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update activation link status"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "User activated successfully"})
 }

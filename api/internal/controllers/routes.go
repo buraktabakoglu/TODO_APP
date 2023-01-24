@@ -10,41 +10,43 @@ import (
 
 func (s *Server) initializeRoutes() {
 
-	rou := s.Router.Group("/api")
+	Router := s.Router.Group("/api")
 	{
-
-		// Reset password:
-		rou.POST("/password/forgot", s.ForgotPassword)
-		rou.POST("/password/reset", s.ResetPassword)
-
+		Router.Use(middlewares.CombinedAuthMiddleware())
 		// use ginSwagger middleware to serve the API docs
-		rou.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-		//Login
-		rou.POST("/login", s.Login)
-		//Logout
-		rou.DELETE("/logout", s.Logout)
+		Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+		//Read-all users
+		Router.GET("/users", s.GetUsers)
+		//Read user
+		Router.GET("/users/:id", s.GetUser)
+		//Update user
+		Router.PUT("/users/:id", s.UpdateUser)
+		//Delete user
+		Router.DELETE("/users/:id", s.DeleteUser)
+
+		//Create Todo
+		Router.POST("/todos", s.CreateTodo)
+		//Read-all todos
+		Router.GET("/todos", s.GetTodos)
+		//Read todo
+		Router.GET("/todos/:id", s.GetTodo)
+		//Update todo
+		Router.PUT("/todos/:id", s.UpdateATodo)
+		//Delete todo
+		Router.DELETE("/todos/:id", s.DeleteATodo)
+
+	}
+	Public := s.Router.Group("/api")
+	
+
+	{
+		
 
 		//Create user
-		rou.POST("/users", middlewares.TokenAuthMiddleware(), s.CreateUser)
-		//Read-all users
-		rou.GET("/users",middlewares.TokenAuthMiddleware(), s.GetUsers)
-		//Read user
-		rou.GET("/users/:id",middlewares.TokenAuthMiddleware(), s.GetUser)
-		//Update user
-		rou.PUT("/users/:id", middlewares.TokenAuthMiddleware(), s.UpdateUser)
-		//Delete user
-		rou.DELETE("/users/:id", middlewares.TokenAuthMiddleware(), s.DeleteUser)
-
-		rou.POST("/todos", middlewares.TokenAuthMiddleware(), s.CreateTodo)
-
-		//Read-all todos
-		rou.GET("/todos",middlewares.TokenAuthMiddleware(), s.GetTodos)
-		//Read todo
-		rou.GET("/todos/:id",middlewares.TokenAuthMiddleware(), s.GetTodo)
-		//Update todo
-		rou.PUT("/todos/:id", middlewares.TokenAuthMiddleware(), s.UpdateATodo)
-		//Delete todo
-		rou.DELETE("/todos/:id", middlewares.TokenAuthMiddleware(), s.DeleteATodo)
-
+		Public.POST("/register", s.CreateUser)
+		Public.GET("/activate/:token", s.ActivateUser)
+		Public.POST("/password/forgot", s.ForgotPassword)
+		Public.POST("/password/reset/:token", s.ResetPassword)
 	}
 }

@@ -18,13 +18,13 @@ import (
 )
 
 
-// CreateTodo godoc
-// @Summary                    Create Todo
-// @Description                Add a new Todo
+// @Summary Create a Todo
+// @Description Creates a Todo item and assigns it to the authenticated user
 // @Produce json
-// @Success 200 {object} models.Todo
-// @Router /api/todos/{id} [post]
-// @Security JWT
+// @Security ApiKeyAuth
+// @Param body body models.Todo true "Todo content and status"
+// @Success 201 json models.Todo
+// @Router /api/todos [post]
 func (server *Server) CreateTodo(c *gin.Context) {
 
 	errList = map[string]string{}
@@ -110,13 +110,12 @@ func (server *Server) CreateTodo(c *gin.Context) {
 
 
 	
-//GetAllTodos godoc
-// @Summary                    Get Todos
-// @Description                Get All TODOs
+// @Summary Get Todos
+// @Description Retrieves all todos created by the authenticated user
 // @Produce json
-// @Success 200 {object} models.Todo
+// @Security ApiKeyAuth
+// @Success 200 {array} models.Todo
 // @Router /api/todos [get]
-// @Security JWT
 func (server *Server) GetTodos(c *gin.Context) {
     userID, err := auth.ExtractTokenID(c.Request)
     if err != nil {
@@ -143,14 +142,13 @@ func (server *Server) GetTodos(c *gin.Context) {
     })
 }
 
-//GetTodoByID godoc
-// @Summary                    Get Todo
-// @Description                Get a TODO by ID
+// @Summary Get Todo by ID
+// @Description Retrieves a todo by ID
 // @Produce json
-// @Param id path integer true "Todo ID"
+// @Param id path uint64 true "Todo ID"
 // @Success 200 {object} models.Todo
 // @Router /api/todos/{id} [get]
-// @Security JWT
+// @Security ApiKeyAuth
 func (server *Server) GetTodo(c *gin.Context) {
 
 	todoID := c.Param("id")
@@ -186,15 +184,21 @@ func (server *Server) GetTodo(c *gin.Context) {
 
 	
 }
-//UpdateTodoByID godoc
-// @Summary                    Update Todo
-// @Description                Update TODO by ID
+// UpdateATodo godoc
+// @Summary Update a Todo by ID
+// @Description Update a Todo by ID
+// @Tags Todos
+// @Accept json
 // @Produce json
-// @Param id path integer true "Todo ID"
+// @Security ApiKeyAuth
+// @Param id path string true "Todo ID"
+// @Param todoUpdatee body models.Todo true "Update Todo"
 // @Success 200 {object} models.Todo
-// @Router /api/todos/{id} [patch]
-// @Security JWT
-
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/todos/{id} [put]
 func (server *Server) UpdateATodo(c *gin.Context) {
 
 	errList = map[string]string{}
@@ -302,14 +306,20 @@ func (server *Server) UpdateATodo(c *gin.Context) {
 
 	
 }
-//DeleteTodoByID godoc
-// @Summary                    Delete Todo
-// @Description                Delete TODO by ID
+// DeleteATodo godoc
+// @Summary Delete a Todo by ID
+// @Description Delete a Todo by ID
+// @Tags Todos
+// @Accept json
 // @Produce json
-// @Param id path integer true "Todo ID"
-// @Success 200 {object} models.Todo
+// @Security ApiKeyAuth
+// @Param id path string true "Todo ID"
+// @Success 200
+// @Failure 400
+// @Failure 401 
+// @Failure 404 
+// @Failure 500 
 // @Router /api/todos/{id} [delete]
-// @Security JWT
 func (server *Server) DeleteATodo(c *gin.Context) {
 
 	todoID := c.Param("id")

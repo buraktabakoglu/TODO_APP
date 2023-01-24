@@ -1,12 +1,42 @@
-version: '3.8'
+version: "3"
 services:
-  db:
-    image: postgres
-    volumes:
-      - ./data/db:/var/lib/postgresql/data
+  todo:
+    build:
+      context: C:\Users\burak\GolangWorkSpace\GolangAppX
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASSWORD: 3g1avcs7r
+    depends_on:
+      - db
+    networks:
+      - app_network
+  authorize:
+    build:
+      context: C:\Users\burak\GolangWorkSpace\golangappAuth
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASSWORD: 3g1avcs7r
+    depends_on:
+      - db
+    networks:
+      - app_network
+  db:    
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 3g1avcs7r
+      POSTGRES_DB: golangapp
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=golangappx
+    networks:
+      - app_network
+networks:
+  app_network:

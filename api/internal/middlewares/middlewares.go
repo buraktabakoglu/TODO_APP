@@ -1,36 +1,45 @@
 package middlewares
 
 import (
-	"errors"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/buraktabakoglu/GOLANGAPPX/api/pkg/auth"
 	"github.com/gin-gonic/gin"
 )
 
-func TokenAuthMiddleware() gin.HandlerFunc {
+func CombinedAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-	
 
-		tokenString := auth.ExtractToken(c.Request)
-		tokenHash := auth.TokenHash(tokenString)
+		token := c.Request.Header.Get("Authorization")
 
-		redisConn := auth.GetRedisConnection()
-		isBlacklisted, err := redisConn.SIsMember("blacklisted_tokens", tokenHash).Result()
+		url := os.Getenv("AUTHORIZE_URL")
+		client := &http.Client{}
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Add("Authorization", token)
+		resp, err := client.Do(req)
+
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
-			return 
-		}
-
-		if isBlacklisted {
-			c.AbortWithError(http.StatusUnauthorized, errors.New("token geçersizdir"))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.Abort()
 			return
 		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			c.JSON(resp.StatusCode, gin.H{"error": "Not authorized"})
+			c.Abort()
+			return
+		}
+
+		
 
 		c.Next()
 	}
 }
+
+
 func CheckUserOwnership(c *gin.Context) {
 	userID, err := auth.ExtractTokenID(c.Request)
 	if err != nil {
