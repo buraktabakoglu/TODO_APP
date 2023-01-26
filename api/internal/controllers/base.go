@@ -38,8 +38,15 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 	}
 
 	
-	server.DB.CreateTable(&models.User{})
-	server.DB.CreateTable(&models.Todo{})
+
+	server.DB.Debug().AutoMigrate(
+		&models.Todo{},
+		&models.User{},
+		&models.ResetPassword{},
+		&models.Activation_links{},
+	)
+	//server.DB.CreateTable(&models.User{})
+	//server.DB.CreateTable(&models.Todo{})
 	
 
 	server.Router = gin.Default()

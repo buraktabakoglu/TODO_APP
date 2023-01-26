@@ -14,13 +14,14 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
+	"go.uber.org/zap"
 
 	"github.com/dgrijalva/jwt-go"
 )
 
 func GetRedisConnection() *redis.Client {
     client := redis.NewClient(&redis.Options{
-        Addr:     "localhost:6379",
+        Addr:     "redis:6379",
         Password: "", 
         DB:       0,  
     })
@@ -30,7 +31,14 @@ func GetRedisConnection() *redis.Client {
 func RegisterCreateToken(email string, createdAt time.Time) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(email + createdAt.String()))
-	return hex.EncodeToString(hasher.Sum(nil))
+	token := hex.EncodeToString(hasher.Sum(nil))
+
+	zap.S().Info("Token generated",
+		zap.String("email", email),
+		zap.Time("createdAt", createdAt),
+		zap.String("token", token),
+	)
+	return token
 }
 
 

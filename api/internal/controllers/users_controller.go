@@ -2,9 +2,7 @@ package controllers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -78,7 +76,7 @@ func (server *Server) CreateUser(c *gin.Context) {
 		return
 	}
 	token := auth.RegisterCreateToken(user.Email, user.CreatedAt)
-	result := server.DB.Exec("INSERT INTO activation_links(user_id, token, is_used, created_at) VALUES($1, $2, $3, $4)", user.ID, token, false, time.Now())
+	result := server.DB.Exec("INSERT INTO Activation_links(user_id, token, is_used, created_at) VALUES($1, $2, $3, $4)", user.ID, token, false, time.Now())
 	if err := result.Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save activation link"})
 		return
@@ -358,42 +356,29 @@ func (server *Server) DeleteUser(c *gin.Context) {
 // @Router /api/activate/{token} [get]
 func (server *Server) ActivateUser(c *gin.Context) {
 	token := c.Param("token")
-	
-
-	dbuser := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-
-	db, err := sql.Open("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbuser, password, dbname))
-	if err != nil {
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect to the database"})
-	return
-	}
-	defer db.Close()
-
 
 	// check if the activation link already used
-	var is_used bool
-	var userID int
-	err = db.QueryRow("SELECT is_used, user_id FROM activation_links WHERE token = $1", token).Scan(&is_used, &userID)
+	var link models.Activation_links
+	err := server.DB.Table("activation_links").Where("token = ?", token).Scan(&link).Error
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid activation token"})
 		return
 	}
-	if is_used {
+	if link.Is_used {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Activation link already used"})
 		return
 	}
 	// Update the user's activation status in the database
-	_, err = db.Exec("UPDATE users SET is_active = true WHERE id = $1", userID)
+	err = server.DB.Table("users").Where("id = ?", link.UserID).Update("is_active", true).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate the user"})
 		return
 	}
-	_, err = db.Exec("UPDATE activation_links SET is_used = true WHERE token = $1", token)
+	err = server.DB.Table("activation_links").Where("token = ?", token).Update("is_used", true).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update activation link status"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "User activated successfully"})
 }
+
