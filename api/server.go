@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/buraktabakoglu/GOLANGAPPX/api/internal/controllers"
-	//"github.com/buraktabakoglu/GOLANGAPPX/api/seed"
 	"github.com/joho/godotenv"
 )
 

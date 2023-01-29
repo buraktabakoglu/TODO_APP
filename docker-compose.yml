@@ -46,7 +46,7 @@ services:
      POSTGRES_USER: postgres
      POSTGRES_PASSWORD: 3g1avcs7r
      POSTGRES_DB: golangapp
-     POSTGRES_HOST_AUTH_METHOD: trust
+     POSTGRES_HOST_AUTH_METHOD: md5
     ports:
       - "5432:5432"
     networks:
@@ -88,6 +88,17 @@ services:
     environment:
       REDIS_HOST: redis
       DB_HOST: db
+    depends_on:
+      - db
+    networks:
+      - app_network
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@pgadmin.org
+      PGADMIN_DEFAULT_PASSWORD: admin
     depends_on:
       - db
     networks:

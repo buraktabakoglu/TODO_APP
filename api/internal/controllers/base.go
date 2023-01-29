@@ -2,17 +2,15 @@ package controllers
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/jinzhu/gorm"
 
-	//"github.com/gorilla/mux"
 	"github.com/gin-gonic/gin"
 
-	_"github.com/jinzhu/gorm/dialects/postgres"
-
-	"github.com/buraktabakoglu/GOLANGAPPX/api/pkg/models"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 type Server struct {
@@ -36,18 +34,23 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 			fmt.Printf("We are connected to the %s database", Dbdriver)
 		}
 	}
+	sqlFile, err := ioutil.ReadFile("./api/pkg/db/migrations/20230129_create_tables.sql")
+	if err != nil {
+		log.Fatalf("Error reading SQL file: %v", err)
+	}
 
-	
+	sql := string(sqlFile)
+	result, err := server.DB.DB().Exec(sql)
+	if err != nil {
+		log.Fatalf("Error executing SQL: %v", err)
+	}
 
-	server.DB.Debug().AutoMigrate(
-		&models.Todo{},
-		&models.User{},
-		&models.ResetPassword{},
-		&models.Activation_links{},
-	)
-	//server.DB.CreateTable(&models.User{})
-	//server.DB.CreateTable(&models.Todo{})
-	
+	affected, err := result.RowsAffected()
+	if err != nil {
+		log.Fatalf("Error getting rows affected: %v", err)
+	}
+
+	log.Printf("SQL executed, %d rows affected", affected)
 
 	server.Router = gin.Default()
 
