@@ -2,22 +2,23 @@ package controllers
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/jinzhu/gorm"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 
-	_"github.com/jinzhu/gorm/dialects/postgres"
-
-	"github.com/buraktabakoglu/GOLANGAPPX/api/models"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 type Server struct {
 	DB     *gorm.DB
-	Router *mux.Router
+	Router *gin.Engine
 }
+
+var errList = make(map[string]string)
 
 func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) {
 
@@ -33,10 +34,25 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 			fmt.Printf("We are connected to the %s database", Dbdriver)
 		}
 	}
+	sqlFile, err := ioutil.ReadFile("./api/pkg/db/migrations/20230129_create_tables.sql")
+	if err != nil {
+		log.Fatalf("Error reading SQL file: %v", err)
+	}
 
-	server.DB.Debug().AutoMigrate(&models.User{}, &models.Todo{}) //database migration yapılacak.
+	sql := string(sqlFile)
+	result, err := server.DB.DB().Exec(sql)
+	if err != nil {
+		log.Fatalf("Error executing SQL: %v", err)
+	}
 
-	server.Router = mux.NewRouter()
+	affected, err := result.RowsAffected()
+	if err != nil {
+		log.Fatalf("Error getting rows affected: %v", err)
+	}
+
+	log.Printf("SQL executed, %d rows affected", affected)
+
+	server.Router = gin.Default()
 
 	server.initializeRoutes()
 }

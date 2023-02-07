@@ -13,9 +13,13 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+.env
 .DS_Store
 TODO.md
 logs.txt
 .idea/
 secret.md
-app.env
+app.env*
+data/
+vendor
+docs

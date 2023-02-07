@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"crypto/md5"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,21 +13,80 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis"
+	"go.uber.org/zap"
+
 	"github.com/dgrijalva/jwt-go"
 )
 
-func CreateToken(user_id uint64) (string, error) {
+func GetRedisConnection() *redis.Client {
+    client := redis.NewClient(&redis.Options{
+        Addr:     "redis:6379",
+        Password: "", 
+        DB:       0,  
+    })
+    return client
+}
+
+func RegisterCreateToken(email string, createdAt time.Time) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(email + createdAt.String()))
+	token := hex.EncodeToString(hasher.Sum(nil))
+
+	zap.S().Info("Token generated",
+		zap.String("email", email),
+		zap.Time("createdAt", createdAt),
+		zap.String("token", token),
+	)
+	return token
+}
+
+
+
+func CreateToken(user_id uint32) (string, error) {
+	tokenKey := fmt.Sprintf("token:%s", TokenHash("token"))
 	claims := jwt.MapClaims{}
 	claims["authorized"] = true
 	claims["user_id"] = user_id
 	claims["exp"] = time.Now().Add(time.Hour * 1).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(os.Getenv("API_SECRET")))
+	signedToken, err := token.SignedString([]byte(os.Getenv("API_SECRET")))
+	if err != nil {
+		return "", err
+	}
 
+	redisConn := GetRedisConnection()
+	if err := redisConn.Set(tokenKey, signedToken, time.Hour).Err(); err != nil {
+		return "", err
+	}
+
+	return signedToken, nil
+
+	
+}
+
+
+
+func TokenHash(text string) string {
+
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	theHash := hex.EncodeToString(hasher.Sum(nil))
+
+	theToken := theHash
+
+	return theToken
 }
 
 func TokenValid(r *http.Request) error {
 	tokenString := ExtractToken(r)
+
+	redisConn := GetRedisConnection()
+	tokenKey := fmt.Sprintf("token:%s", TokenHash(tokenString))
+	if redisConn.Exists(tokenKey).Val() == 0{
+		return fmt.Errorf("invalid token")
+	}
+	
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -39,6 +101,7 @@ func TokenValid(r *http.Request) error {
 	}
 	return nil
 }
+
 
 func ExtractToken(r *http.Request) string {
 	keys := r.URL.Query()

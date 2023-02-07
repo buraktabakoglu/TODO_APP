@@ -13,18 +13,19 @@ import (
 )
 
 type User struct {
-	ID        uint64    `gorm:"primary_key;auto_increment" json:"id"`
+	ID        uint32     `gorm:"primary_key;auto_increment" json:"id"`
 	Nickname  string    `gorm:"size:255;not null;unique" json:"nickname"`
 	Email     string    `gorm:"size:100;not null;unique" json:"email"`
+	Token     string    `json:"token"`
+	IsActive  bool      `gorm:"default:false" json:"is_active"`
 	Password  string    `gorm:"size:100;not null;" json:"password"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
+
 }
 
 var err error
 
-
-//herhangi bir dosya veya veri parçasının değiştirilmediğini, üzerinde oynanmadığını doğrulamak amacı taşır.
 func Hash(password string) ([]byte, error) {
 	return bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 }
@@ -43,59 +44,86 @@ func (u *User) BeforeSave() error {
 }
 
 func (u *User) Prepare() {
-	u.ID = 0
+
 	u.Nickname = html.EscapeString(strings.TrimSpace(u.Nickname))
 	u.Email = html.EscapeString(strings.TrimSpace(u.Email))
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
 }
 
-func (u *User) Validate(action string) error {
+//Validate
+func (u *User) Validate(action string) map[string]string {
+	var errorMessages = make(map[string]string)
+	var err error
+
 	switch strings.ToLower(action) {
 	case "update":
-		if u.Nickname == "" {
-			return errors.New("required Nickname")
-		}
-		if u.Password == "" {
-			return errors.New("required Password")
-		}
 		if u.Email == "" {
-			return errors.New("required Email")
+			err = errors.New("required Email")
+			errorMessages["Required_email"] = err.Error()
 		}
-		if err := checkmail.ValidateFormat(u.Email); err != nil {
-			return errors.New("ınvalid Email")
+		if u.Email != "" {
+			if err = checkmail.ValidateFormat(u.Email); err != nil {
+				err = errors.New("ınvalid Email")
+				errorMessages["Invalid_email"] = err.Error()
+			}
 		}
 
-		return nil
 	case "login":
 		if u.Password == "" {
-			return errors.New("required Password")
+			err = errors.New("required Password")
+			errorMessages["Required_password"] = err.Error()
 		}
 		if u.Email == "" {
-			return errors.New("required Email")
+			err = errors.New("required Email")
+			errorMessages["Required_email"] = err.Error()
 		}
-		if err := checkmail.ValidateFormat(u.Email); err != nil {
-			return errors.New("ınvalid Email")
+		if u.Email != "" {
+			if err = checkmail.ValidateFormat(u.Email); err != nil {
+				err = errors.New("invalid Email")
+				errorMessages["Invalid_email"] = err.Error()
+			}
 		}
-		return nil
-
+	case "forgotpassword":
+		if u.Email == "" {
+			err = errors.New("required Email")
+			errorMessages["Required_email"] = err.Error()
+		}
+		if u.Email != "" {
+			if err = checkmail.ValidateFormat(u.Email); err != nil {
+				err = errors.New("invalid Email")
+				errorMessages["Invalid_email"] = err.Error()
+			}
+		}
 	default:
 		if u.Nickname == "" {
-			return errors.New("required Nickname")
+			err = errors.New("required Nickname")
+			errorMessages["Required_Nickname"] = err.Error()
 		}
 		if u.Password == "" {
-			return errors.New("required Password")
+			err = errors.New("required Password")
+			errorMessages["Required_password"] = err.Error()
+		}
+		if u.Password != "" && len(u.Password) < 6 {
+			err = errors.New("password should be atleast 6 characters")
+			errorMessages["Invalid_password"] = err.Error()
 		}
 		if u.Email == "" {
-			return errors.New("required Email")
+			err = errors.New("required Email")
+			errorMessages["Required_email"] = err.Error()
+
 		}
-		if err := checkmail.ValidateFormat(u.Email); err != nil {
-			return errors.New("ınvalid Email")
+		if u.Email != "" {
+			if err = checkmail.ValidateFormat(u.Email); err != nil {
+				err = errors.New("invalid Email")
+				errorMessages["invalid_email"] = err.Error()
+			}
 		}
-		return nil
 	}
+	return errorMessages
 }
 
+//SaveUser
 func (u *User) SaveUser(db *gorm.DB) (*User, error) {
 
 	err = db.Debug().Create(&u).Error
@@ -105,6 +133,7 @@ func (u *User) SaveUser(db *gorm.DB) (*User, error) {
 	return u, nil
 }
 
+//FindAllUsers
 func (u *User) FindAllUsers(db *gorm.DB) (*[]User, error) {
 	var err error
 	users := []User{}
@@ -115,6 +144,7 @@ func (u *User) FindAllUsers(db *gorm.DB) (*[]User, error) {
 	return &users, err
 }
 
+//FindUserByID
 func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
 
 	err = db.Debug().Model(User{}).Where("id = ?", uid).Take(&u).Error
@@ -127,6 +157,7 @@ func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	return u, err
 }
 
+//UpdateAUser
 func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 
 	err := u.BeforeSave()
@@ -135,16 +166,17 @@ func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 	}
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
-			"password":  u.Password,
-			"nickname":  u.Nickname,
-			"email":     u.Email,
-			"update_at": time.Now(),
+			"password":   u.Password,
+			"nickname":   u.Nickname,
+			"email":      u.Email,
+			"updated_at": time.Now(),
 		},
 	)
 	if db.Error != nil {
 		return &User{}, db.Error
 	}
 
+	//updated user
 	err = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&u).Error
 	if err != nil {
 		return &User{}, err
@@ -152,6 +184,7 @@ func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 	return u, nil
 }
 
+//DeleteAUser
 func (u *User) DeleteAUser(db *gorm.DB, uid uint32) (int64, error) {
 
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).Delete(&User{})
@@ -160,4 +193,25 @@ func (u *User) DeleteAUser(db *gorm.DB, uid uint32) (int64, error) {
 		return 0, db.Error
 	}
 	return db.RowsAffected, nil
+}
+
+//UpdatePassword
+func (u *User) UpdatePassword(db *gorm.DB) error {
+
+	//password hash..
+	err := u.BeforeSave()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db = db.Debug().Model(&User{}).Where("email = ?", u.Email).Take(&User{}).UpdateColumns(
+		map[string]interface{}{
+			"password":  u.Password,
+			"updated_at": time.Now(),
+		},
+	)
+	if db.Error != nil {
+		return db.Error
+	}
+	return nil
 }
