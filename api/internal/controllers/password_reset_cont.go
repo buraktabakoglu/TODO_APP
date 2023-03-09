@@ -98,12 +98,13 @@ func (server *Server) ForgotPassword(c *gin.Context) {
 	// Send message to kafka topic
 	kafkaWriter := kafka.NewWriter(kafka.WriterConfig{
 		Brokers:  []string{os.Getenv("KAFKA_BROKER")},
-		Topic:    "reset_password",
+		Topic:    "email-topic",
 		Balancer: &kafka.LeastBytes{},
 	})
 	defer kafkaWriter.Close()
 
 	kafkaMessage := kafka.Message{
+		Key: []byte("reset_password"),
 		Value: resetPassJson,
 	}
 	err = kafkaWriter.WriteMessages(context.Background(), kafkaMessage)

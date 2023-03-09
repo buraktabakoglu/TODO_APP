@@ -27,10 +27,11 @@ CREATE TABLE activation_links (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE reset_password (
+CREATE TABLE reset_passwords (
 	id SERIAL PRIMARY KEY,
 	email VARCHAR(100) NOT NULL,
 	token VARCHAR(255) NOT NULL,
 	created_at TIMESTAMP DEFAULT NOW(),
-	updated_at TIMESTAMP DEFAULT NOW()
+	updated_at TIMESTAMP DEFAULT NOW(),
+  deleted_at TIMESTAMP DEFAULT NOW()
 );

@@ -33,7 +33,7 @@ func TestSignIn(t *testing.T) {
 	}{
 		{
 			email:        user.Email,
-			password:     "password", 
+			password:     "password",
 			errorMessage: "crypto/bcrypt: hashedPassword is not the hash of the given password",
 		},
 		{
@@ -112,7 +112,7 @@ func TestLogin(t *testing.T) {
 	for _, v := range samples {
 
 		r := gin.Default()
-		r.POST("/login", server.Login)
+		r.POST("http://localhost:8081/login")
 		req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBufferString(v.inputJSON))
 		if err != nil {
 			t.Errorf("this is the error: %v", err)
@@ -152,4 +152,3 @@ func TestLogin(t *testing.T) {
 		}
 	}
 }
-
