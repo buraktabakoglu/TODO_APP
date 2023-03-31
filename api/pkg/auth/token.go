@@ -21,7 +21,7 @@ import (
 
 func GetRedisConnection() *redis.Client {
     client := redis.NewClient(&redis.Options{
-        Addr:     "redis:6379",
+        Addr:     os.Getenv("REDIS"),
         Password: "", 
         DB:       0,  
     })

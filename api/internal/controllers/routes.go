@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/buraktabakoglu/GOLANGAPPX/api/internal/middlewares"
 
-	_ "github.com/buraktabakoglu/GOLANGAPPX/docs"
+	_ "github.com/buraktabakoglu/GOLANGAPPX/api/pkg/docs"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -38,10 +38,8 @@ func (s *Server) initializeRoutes() {
 
 	}
 	Public := s.Router.Group("/api")
-	
 
 	{
-		
 
 		//Create user
 		Public.POST("/register", s.CreateUser)

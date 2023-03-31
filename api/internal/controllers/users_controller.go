@@ -94,6 +94,7 @@ func (server *Server) CreateUser(c *gin.Context) {
 		userJSON, _ := json.Marshal(user)
 		w.WriteMessages(context.Background(),
 			kafka.Message{
+				Key: []byte("register"),
 				Value: userJSON,
 			},
 		)
